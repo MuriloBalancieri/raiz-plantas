@@ -1,0 +1,15 @@
+Dados/
+dados-local.txt
+*.protegido
+*.csv
+*.tmp
+*.bak
+*.log
+.env
+.env.*
+.vs/
+obj/
+bin/
+work/
+.codex/
+.agents/

@@ -1,0 +1,87 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Raiz;
+
+public static class Tests {
+    static int passed;
+    static void Check(bool ok,string label){if(!ok)throw new Exception("FALHOU: "+label);passed++;Console.WriteLine("OK: "+label);}
+    static DateTime now=new DateTime(2026,10,29,15,0,0,DateTimeKind.Utc);
+    static bool Throws(Action action){try{action();return false;}catch(ApiException){return true;}}
+    [STAThread] public static int Main(string[] args) {
+        var parser=new SensorParser();
+        Check(parser.Parse("{\"soil_raw\":0,\"light_raw\":1023}",now).Soil==0,"zero e limite superior sao leituras validas");
+        Check(parser.Parse("{\"soil_raw\":1024,\"light_raw\":20}",now)==null,"rejeita ADC acima do limite");
+        Check(parser.Parse("{\"soil_raw\":-1,\"light_raw\":20}",now)==null,"rejeita ADC negativo");
+        Check(parser.Parse("{\"soil_raw\":0.5,\"light_raw\":20}",now)==null,"rejeita ADC fracionario");
+        Check(parser.Parse("{\"light_raw\":20}",now)==null,"pacote parcial nao vira leitura");
+        Check(parser.Parse("{json quebrado}",now)==null,"JSON corrompido nao derruba leitor");
+        Check(parser.Parse("Temperatura do ar: 53.5 C",now)==null,"ignora DHT do sketch antigo");
+        parser.Parse("Luz (bruto): 242",now);
+        Check(parser.Parse("Solo (bruto): 557",now).Light==242,"aceita sketch anterior");
+        Check(parser.Parse("Solo (bruto): 558",now)==null,"nao reutiliza luz de outro ciclo");
+        parser.Parse("Luz (valor bruto): 0",now);
+        Check(parser.Parse("Solo (valor bruto): 0",now).Soil==0,"aceita formato original e zeros");
+        parser.Parse("Luz (bruto): 200",now);
+        Check(parser.Parse("Solo (bruto): 400",now.AddSeconds(5))==null,"nao combina medidas distantes");
+        parser.Parse("Luz (bruto): 200",now);parser.Parse("----------------",now);
+        Check(parser.Parse("Solo (bruto): 400",now)==null,"separador descarta pacote incompleto");
+        var c=new Calibration{Dry=800,Wet=300,Dark=100,Bright=900};
+        Check(c.Soil(550)==50,"calibra solo com sentido invertido");
+        Check(c.Light(500)==50,"calibra luz no sentido crescente");
+        Check(c.Soil(100)==100 && c.Soil(1000)==0,"limita indice relativo a 0..100");
+        Check(Calibration.Normalize(500,500,510)==null,"nao divide por referencias proximas");
+        Check(Calibration.Normalize(0,null,300)==null,"sem calibracao nao inventa porcentagem");
+        var p=new Plant{Name="Teste",Soil=new Raiz.Range(30,70),Light=new Raiz.Range(20,80),Temperature=new Raiz.Range(15,30),Humidity=new Raiz.Range(40,80),Watering="Rega frequente",Outdoor=true};
+        var s=new Sample{Soil=800,Light=100,Utc=now};
+        var w=new Weather{Temperature=35,Humidity=20,IsDay=true,FetchedUtc=now,ModelUtc=now};
+        var a=Assessment.Evaluate(p,s,w,c,now);
+        Check(a.Any(x=>x.Title=="Solo: abaixo da faixa"),"detecta solo abaixo de faixa cadastrada");
+        Check(a.Any(x=>x.Title=="Temperatura regional: acima da faixa"),"compara temperatura externa");
+        Check(a.Any(x=>x.Title=="Umidade regional: abaixo da faixa"),"compara umidade externa");
+        Check(a.Any(x=>x.Title=="Espécie + sensores + contexto"&&x.Body.Contains("temperatura regional também")),"cruza orientacao da especie, solo e temperatura externa");
+        p.Outdoor=false;a=Assessment.Evaluate(p,s,w,c,now);
+        Check(!a.Any(x=>x.Title.StartsWith("Temperatura regional:")),"nao usa clima externo como ar interno");
+        w.IsDay=false;a=Assessment.Evaluate(p,s,w,c,now);
+        Check(!a.Any(x=>x.Title=="Luz: abaixo da faixa"),"nao alerta pouca luz durante noite");
+        a=Assessment.Evaluate(p,s,w,c,now.AddMinutes(50));
+        Check(!a.Any(x=>x.Severity=="attention"),"dados antigos nao geram diagnostico");
+        Check(a.Any(x=>x.Title=="Aguardando sensores"),"desconexao indica sensor antigo");
+        w.FetchedUtc=now;w.IsDay=null;a=Assessment.Evaluate(p,s,w,c,now);
+        Check(!a.Any(x=>x.Title=="Luz: abaixo da faixa"),"sem dia/noite suspende avaliacao de luz");
+        Check(!new Sample{Utc=now}.Fresh(now.AddSeconds(12)),"sensor expira em doze segundos");
+        Check(!w.Fresh(now.AddMinutes(45)),"clima expira em quarenta e cinco minutos");
+        var oldModel=new Weather{FetchedUtc=now,ModelUtc=now.AddMinutes(-59)};
+        Check(!oldModel.Fresh(now.AddMinutes(2)),"recuperar resposta nao renova horario antigo do modelo");
+        var imported=Api.ParsePlant(Json.Read<Dictionary<string,object>>("{\"id\":155,\"common_name\":\"Monstera\",\"scientific_name\":[\"Monstera deliciosa\"],\"watering\":\"Average\",\"sunlight\":[\"part shade\"],\"hardiness\":{\"min\":10},\"xWateringBasedTemperature\":{\"min\":10,\"max\":20}}"));
+        Check(imported.Sunlight=="Meia-sombra"&&imported.Watering=="Rega moderada","normaliza orientacoes documentadas da API");
+        Check(!imported.Temperature.Enabled&&!imported.Humidity.Enabled&&!imported.Soil.Enabled,"nao inventa faixas a partir de rusticidade ou rega");
+        Check(Throws(()=>Api.ParsePlant(new Dictionary<string,object>())),"detalhes bloqueados nao viram perfil vazio");
+        Check(MainForm.ParseRange("10,5","20",0,100,"teste").Min==10.5,"aceita decimal brasileiro");
+        Check(Throws(()=>MainForm.ParseRange("20","10",0,100,"teste")),"rejeita faixa invertida");
+        Check(Throws(()=>MainForm.ParseRange("","10",0,100,"teste")),"rejeita metade de faixa");
+        Check(Throws(()=>MainForm.ParseRange("NaN","30",0,100,"teste")),"rejeita NaN");
+        Check(Store.CsvCell("=HYPERLINK(1)").StartsWith("\"'="),"neutraliza formula na exportacao");
+        var raw="{\"utc_offset_seconds\":-10800,\"timezone\":\"America/Sao_Paulo\",\"current_units\":{\"temperature_2m\":\"°C\",\"relative_humidity_2m\":\"%\"},\"current\":{\"time\":\"2026-10-29T12:00\",\"temperature_2m\":0,\"relative_humidity_2m\":0,\"is_day\":1}}";
+        var weather=Api.ParseWeather(Json.Read<Dictionary<string,object>>(raw),now);
+        Check(weather.Temperature==0&&weather.Humidity==0,"API mantem zero como valor valido");
+        Check(Throws(()=>Api.ParseWeather(Json.Read<Dictionary<string,object>>(raw),now.AddHours(2))),"rejeita horario meteorologico antigo");
+        raw=raw.Replace("\"temperature_2m\":0","\"temperature_2m\":null");weather=Api.ParseWeather(Json.Read<Dictionary<string,object>>(raw),now);
+        Check(weather.Temperature==null&&weather.Humidity==0,"medida ausente permanece indisponivel");
+        var folder=args.Length>0?args[0]:Path.Combine(Path.GetTempPath(),"RaizTests_"+Guid.NewGuid().ToString("N"));
+        var store=new Store(folder);store.Settings.Plants.Add(p);store.Settings.ActiveId=p.LocalId;store.Settings.Calibration=c;store.Save();
+        var loaded=new Store(folder);Check(loaded.Settings.ActiveId==p.LocalId&&loaded.Settings.Calibration.Soil(550)==50,"persistencia de planta e calibracao");
+        store.SaveKey("chave-ficticia-apenas-para-teste");Check(store.LoadKey()=="chave-ficticia-apenas-para-teste","chave protegida com DPAPI faz ida e volta");
+        Check(!File.ReadAllText(Path.Combine(folder,"configuracao.json")).Contains("chave-ficticia"),"configuracao JSON nao contem chave");
+        store.Append(s,p,w,null,c);var csv=File.ReadAllText(store.HistoryPath);
+        Check(csv.Contains("solo_bruto")&&!csv.Contains("chave-ficticia"),"historico real exportavel sem segredo");
+        CareTests.Run(Check);
+        MessagingTests.Run(Check,folder);
+        TelegramTests.Run(Check,folder);
+        SpeciesTests.Run(Check,folder);
+        UiTests.Run(Check,folder);
+        InitialCredentialTests.Run(Check,folder);
+        Console.WriteLine("PASSOU: "+passed+" verificacoes");return 0;
+    }
+}
