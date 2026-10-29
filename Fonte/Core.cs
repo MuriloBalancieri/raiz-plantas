@@ -64,12 +64,14 @@ public class Plant {
     public override string ToString() {return Name + (string.IsNullOrEmpty(Scientific) ? "" : " · " + Scientific);}
 }
 public class Settings {
+    public bool CloseToTray {get;set;} public bool BackgroundChoiceMade {get;set;} public bool SetupDismissed {get;set;}
+    public List<DateTime> CalibrationChanges {get;set;}
     public List<Plant> Plants {get;set;} public string ActiveId {get;set;}
     public Location Location {get;set;} public Weather Weather {get;set;} public string Port {get;set;}
     public Calibration Calibration {get;set;}
     public WhatsAppOptions WhatsApp {get;set;} public List<NotificationEvent> Notifications {get;set;}
     public TelegramOptions Telegram {get;set;}
-    public Settings() { Plants=new List<Plant>(); Calibration=new Calibration();Port="COM3";WhatsApp=new WhatsAppOptions();Notifications=new List<NotificationEvent>();Telegram=new TelegramOptions(); }
+    public Settings() {CalibrationChanges=new List<DateTime>();CloseToTray=true; Plants=new List<Plant>(); Calibration=new Calibration();Port="COM3";WhatsApp=new WhatsAppOptions();Notifications=new List<NotificationEvent>();Telegram=new TelegramOptions(); }
 }
 public class Store {
     public string Folder {get;private set;} public Settings Settings {get;private set;}
@@ -81,6 +83,7 @@ public class Store {
             try {Settings=Json.Read<Settings>(File.ReadAllText(path,Encoding.UTF8)) ?? new Settings();}
             catch {LoadWarning="Não foi possível ler a configuração. O arquivo foi preservado; confira antes de salvar.";}
         }
+        if(Settings.CalibrationChanges==null)Settings.CalibrationChanges=new List<DateTime>();
         if(Settings.Plants==null) Settings.Plants=new List<Plant>();
         if(Settings.Calibration==null) Settings.Calibration=new Calibration();
         if(Settings.WhatsApp==null)Settings.WhatsApp=new WhatsAppOptions();
@@ -149,6 +152,7 @@ public class Store {
     static string Format(double? n) {return n.HasValue?n.Value.ToString("0.0",CultureInfo.InvariantCulture):"";}
 }
 public class Sample {
+    public bool? Daylight {get;set;}
     public int Soil {get;set;} public int Light {get;set;} public DateTime Utc {get;set;}
     public bool Fresh(DateTime now) {return now>=Utc.AddSeconds(-1) && now-Utc<TimeSpan.FromSeconds(12);}
 }

@@ -1,8 +1,20 @@
-﻿# Validação — Raiz 1.8 privada
+﻿# Validação — Raiz 2.0
 
 Data: 29/10/2026. Testes locais neste Windows; não houve CI nem validação em outro computador.
 
-## Publicação privada e configuração inicial
+## Versão 2.0 — seis recursos
+
+- **355 verificações locais passaram** na suíte final. Sem o arquivo opcional da resposta pública da Perenual da versão anterior, a distribuição executa 354. Foram preservados os testes anteriores de sensores, cuidados, importação, Telegram, receptor local, configuração e interface.
+- A recomendação principal foi testada com solo úmido, solo seco persistente, leitura ausente, demonstração e pouca luz com solo sem necessidade de água.
+- Alertas de luz foram testados para persistência de cinco minutos, ciclo único, separação de rega, ausência de botão de rega, recuperação, cooldown, novo ciclo depois do intervalo, noite, período noturno anterior ao amanhecer, condição curta e desativação da opção.
+- O fluxo de quantidade foi testado com primeiro clique, volume desconhecido, referência inicial, usuário indevido, mensagem incorreta, pergunta vinculada, texto sem vínculo, outro bot, valores inválidos, resposta antiga, volume medido no mesmo registro, ausência de aprendizado sem drenagem, confirmação explícita com medidas válidas, repetição, Não medi, persistência e leitura final desconhecida impedindo aprendizado. O parser de respostas conserva a mensagem e o bot de origem.
+- O histórico diário foi testado com isolamento por planta, CSV com vírgulas e aspas, extremos reais, falta de coleta separando segmentos, regas medidas e não medidas, cobertura observada, dias sem dados, linha incompleta, mudança de calibração e arquivo ausente.
+- O assistente foi testado por estados prontos/pendentes e incluído nas verificações de acomodação de controles em 1080 e 1240 pixels. Um teste com janela oculta confirmou que o timer e o ciclo do app continuam processando; não mostrou ícone na área de notificação nem controlou janelas reais.
+- Renderizações de Hoje, Avisos, Primeiros passos e Histórico foram inspecionadas com dados fictícios, sem abrir conexão serial ou enviar mensagens reais. Os testes de Telegram usam respostas simuladas; não houve novo teste físico de luz/rega, conversa real de quantidade pelo celular ou teste prolongado de coleta em segundo plano.
+- Os dados reais do usuário e o arquivo inicial privado de credenciais foram preservados. A cópia local de atualização aponta para os dados originais e exclui o arquivo de credenciais em texto puro. O repositório privado mantém esse arquivo já autorizado, sem inclusão de novos segredos em outros arquivos.
+- As limitações de medição, aprendizado, histórico legado e execução em segundo plano estão descritas em NOVO-2.0.md.
+
+## Registro da publicação privada e configuração inicial
 
 - **302 verificações locais passaram**, incluindo nove cenários de importação de credenciais: primeira instalação, proteção local Windows, vínculo sem código temporário, recepção e avisos, ausência do token na configuração de uso local, reabertura sem reiniciar offset, preservação de chaves existentes, versão desconhecida e token inválido. Sem o arquivo opcional da resposta pública real da Perenual, a suíte portátil executa 301 verificações.
 - O arquivo inicial contém as chaves reais por solicitação explícita do proprietário, para distribuição entre seus dispositivos em repositório privado. Não está protegido por DPAPI no repositório: essa proteção só é aplicada ao importar em cada usuário Windows. O README informa essa condição.

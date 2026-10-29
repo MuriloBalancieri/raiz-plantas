@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -24,7 +24,10 @@ public class WhatsAppSecrets {
     public string AppSecret {get;set;} public string VerifyToken {get;set;}
 }
 public class NotificationEvent {
-    public string Channel {get;set;}
+    public string Channel {get;set;} public string Kind {get;set;}
+    public double? AlertSoilIndex {get;set;} public int? AlertDry {get;set;} public int? AlertWet {get;set;}
+    public int FollowupAttempts {get;set;} public DateTime? LastFollowupUtc {get;set;}
+    public string QuantityState {get;set;} public long QuantityMessageId {get;set;} public long QuantityPromptId {get;set;} public long DrainageMessageId {get;set;}
     public string Id {get;set;} public string PlantId {get;set;} public string PlantName {get;set;}
     public string RecipientHash {get;set;} public string SenderHash {get;set;}
     public List<string> RecipientAliases {get;set;}
@@ -162,7 +165,7 @@ public class WhatsAppTransport : IDisposable {
 }
 public static class NotificationEngine {
     public static string Channel(NotificationEvent e){return string.IsNullOrEmpty(e.Channel)?"WhatsApp":e.Channel;}
-    public static NotificationEvent Active(Settings settings,string plantId,string channel="WhatsApp"){return settings.Notifications.LastOrDefault(x=>x.PlantId==plantId&&Channel(x)==channel&&!x.IsTest&&!x.ClosedUtc.HasValue);}
+    public static NotificationEvent Active(Settings settings,string plantId,string channel="WhatsApp"){return settings.Notifications.LastOrDefault(x=>x.Kind!="light"&&x.PlantId==plantId&&Channel(x)==channel&&!x.IsTest&&!x.ClosedUtc.HasValue);}
     public static NotificationEvent Prepare(Settings settings,Plant p,WhatsAppSecrets secrets,DateTime now,bool test=false) {
         var e=new NotificationEvent{Id=Guid.NewGuid().ToString("N"),PlantId=p.LocalId,PlantName=p.Name,CreatedUtc=now,State="prepared",IsTest=test,RecipientHash=WhatsAppRules.Hash(WhatsAppRules.Phone(secrets.Recipient)),SenderHash=WhatsAppRules.Hash(secrets.PhoneNumberId)};
         e.RecipientAliases.Add(e.RecipientHash);settings.Notifications.Add(e);return e;
@@ -177,11 +180,11 @@ public static class NotificationEngine {
         return !e.LastAttemptUtc.HasValue||now-e.LastAttemptUtc.Value>=TimeSpan.FromMinutes(5);
     }
     public static bool ResolveIfMoist(Settings settings,Plant p,Calibration c,IList<Sample> samples,DateTime now) {
-        if(p==null)return false;var active=settings.Notifications.Where(x=>x.PlantId==p.LocalId&&!x.IsTest&&!x.ClosedUtc.HasValue).ToList();if(active.Count==0)return false;
+        if(p==null)return false;var active=settings.Notifications.Where(x=>x.Kind!="light"&&x.PlantId==p.LocalId&&!x.IsTest&&!x.ClosedUtc.HasValue).ToList();if(active.Count==0)return false;
         if(CareEngine.Persistent(samples,now,30,s=>CareEngine.ReliableSoil(s,c,s.Utc)&&c.Soil(s.Soil).Value>CareEngine.Trigger(p)+10)){foreach(var e in active){e.ClosedUtc=now;if(!e.ConfirmedUtc.HasValue)e.State="resolved";}return true;}return false;
     }
     public static void AcknowledgeLocal(Settings settings,Plant p,DateTime time){AcknowledgeCycle(settings,p.LocalId,time,"Rega confirmada no app.");}
-    public static void AcknowledgeCycle(Settings settings,string plantId,DateTime time,string detail){foreach(var e in settings.Notifications.Where(x=>x.PlantId==plantId&&!x.IsTest).GroupBy(Channel).Select(g=>g.Last()))if(!e.ConfirmedUtc.HasValue&&(!e.ClosedUtc.HasValue||e.State=="resolved")){e.ConfirmedUtc=time;e.State="confirmed";e.Detail=detail;}}
+    public static void AcknowledgeCycle(Settings settings,string plantId,DateTime time,string detail){foreach(var e in settings.Notifications.Where(x=>x.Kind!="light"&&x.PlantId==plantId&&!x.IsTest).GroupBy(Channel).Select(g=>g.Last()))if(!e.ConfirmedUtc.HasValue&&(!e.ClosedUtc.HasValue||e.State=="resolved")){e.ConfirmedUtc=time;e.State="confirmed";e.Detail=detail;}}
     public static void ResetFailed(Settings settings,DateTime now,string channel="WhatsApp"){foreach(var e in settings.Notifications)if(Channel(e)==channel&&e.State=="failed"&&!e.ClosedUtc.HasValue&&!e.ConfirmedUtc.HasValue){e.ClosedUtc=now;e.Detail="Configuração salva novamente; nova tentativa permitida para um próximo alerta.";}}
     public static int Apply(Settings settings,IEnumerable<InboundEvent> incoming,Sample s,Calibration c,DateTime now) {
         int added=0;
@@ -196,7 +199,7 @@ public static class NotificationEngine {
             }
             var e=settings.Notifications.LastOrDefault(x=>Channel(x)=="WhatsApp"&&x.Id==message.Payload);
             if(e==null||(e.ClosedUtc.HasValue&&e.State!="resolved")||e.ConfirmedUtc.HasValue||!RecipientMatches(e,message.FromHash)||e.SenderHash!=message.SenderHash||message.Utc<e.CreatedUtc.AddMinutes(-5)||message.Utc>now.AddMinutes(5)||now-message.Utc>TimeSpan.FromDays(7))continue;
-            if(!e.IsTest&&settings.Notifications.Any(x=>!x.IsTest&&Channel(x)=="WhatsApp"&&x.PlantId==e.PlantId&&x.CreatedUtc>e.CreatedUtc))continue;
+            if(!e.IsTest&&settings.Notifications.Any(x=>x.Kind!="light"&&!x.IsTest&&Channel(x)=="WhatsApp"&&x.PlantId==e.PlantId&&x.CreatedUtc>e.CreatedUtc))continue;
             // The signed opaque payload and bound recipient identify the alert. Meta may
             // represent context IDs in another namespace; context is not an auth credential.
             var p=settings.Plants.Find(x=>x.LocalId==e.PlantId);if(p==null)continue;

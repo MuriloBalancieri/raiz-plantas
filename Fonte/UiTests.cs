@@ -22,7 +22,7 @@ public static class UiTests {
             typeof(Control).GetMethod("SetState",flags).Invoke(form,new object[]{2,true});form.CreateControl();
             foreach(int width in new[]{1080,1240}){
                 form.Size=new Size(width,820);
-                foreach(string page in new[]{"Visão geral","Cuidados e rega","Telegram e avisos","Minha planta","Arduino e calibração","Configurações","Histórico","Clima da região"}){
+                foreach(string page in new[]{"Visão geral","Cuidados e rega","Telegram e avisos","Minha planta","Arduino e calibração","Configurações","Histórico","Clima da região","Primeiros passos"}){
                     typeof(MainForm).GetMethod("Navigate",flags).Invoke(form,new object[]{page});Layout(form);Layout(form);
                     var rows=All(form).OfType<ActionRow>().Where(r=>r.Visible).ToList();
                     check(rows.All(r=>r.Controls.Cast<Control>().Where(c=>c.Visible).All(c=>c.Bottom<=r.Height&&c.Right<=r.ClientSize.Width)),"acoes visiveis cabem na tela "+page+" em "+width+"px");
@@ -35,6 +35,9 @@ public static class UiTests {
             check(All(form).OfType<PlotterPanel>().Any(c=>c.Visible),"plotter permanece visivel ao recolher configuracoes");
             typeof(MainForm).GetMethod("Navigate",flags).Invoke(form,new object[]{"Arduino e calibração"});Layout(form);
             check(!All(form).OfType<CheckBox>().Any(c=>c.Text.Contains("DHT")),"sensores nao exigem confirmacao de remocao do DHT");
+            var appTimer=(Timer)typeof(MainForm).GetField("timer",flags).GetValue(form);int before=(int)typeof(MainForm).GetField("tick",flags).GetValue(form);
+            form.Hide();appTimer.Start();var watch=System.Diagnostics.Stopwatch.StartNew();while(watch.ElapsedMilliseconds<1400){Application.DoEvents();System.Threading.Thread.Sleep(10);}appTimer.Stop();
+            check((int)typeof(MainForm).GetField("tick",flags).GetValue(form)>before,"ciclo do aplicativo continua processando com janela oculta");
         }
         CityPickerTests(check);
     }

@@ -69,7 +69,7 @@ public static class CareEngine {
     }
     public static List<WateringRecord> Learned(Plant p,Calibration c) {
         if(p==null||p.Care==null||p.Care.Waterings==null)return new List<WateringRecord>();
-        return p.Care.Waterings.Where(x=>x.DrainageConfirmed&&x.TotalMl>0&&x.TotalMl<=100000&&x.Dry==c.Dry&&x.Wet==c.Wet&&x.InitialIndex<=Trigger(p)&&x.FinalIndex>x.InitialIndex+5&&(!p.Care.LearningResetUtc.HasValue||x.FinishedUtc>p.Care.LearningResetUtc.Value))
+        return p.Care.Waterings.Where(x=>!x.VolumeUnknown&&!x.SensorReadingUnknown&&!x.InitialReadingUnknown&&x.DrainageConfirmed&&x.TotalMl>0&&x.TotalMl<=100000&&x.Dry==c.Dry&&x.Wet==c.Wet&&x.InitialIndex<=Trigger(p)&&x.FinalIndex>x.InitialIndex+5&&(!p.Care.LearningResetUtc.HasValue||x.FinishedUtc>p.Care.LearningResetUtc.Value))
             .OrderByDescending(x=>x.FinishedUtc).Take(5).ToList();
     }
     public static int? Estimate(Plant p,Calibration c) {

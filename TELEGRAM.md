@@ -1,4 +1,4 @@
-﻿# Telegram no Raiz 1.7
+﻿# Telegram no Raiz 2.0
 
 ## Configurar no celular e no computador
 
@@ -11,6 +11,14 @@
 7. Clique em **Ativar avisos pelo Telegram**. O envio automático anterior pelo WhatsApp será pausado; suas credenciais anteriores são preservadas.
 
 Não é necessário informar número de telefone ou procurar um chat ID. O vínculo registra somente a conta que enviou o código privado correto. Não há servidor público, túnel ou aprovação de modelo para essa integração. Se o bot tiver webhook de outro sistema, o Raiz interrompe a configuração sem apagá-lo.
+
+## Novos recursos de rega e luz
+
+O aviso real de rega oferece, depois de Já reguei, registrar a quantidade medida ou escolher Não medi. A pergunta é vinculada à rega e aceita um total inteiro em mL; depois, a drenagem pode ser confirmada separadamente. Quantidade e drenagem não substituem as leituras necessárias para aprender uma dose. Avisos de TESTE não geram regas nem perguntas de quantidade.
+
+A opção Avisar também sobre pouca luz exige referência local válida, clima diurno atualizado e cinco minutos contínuos de pouca luz durante o dia. Há intervalo mínimo de seis horas entre ciclos da mesma planta. Avisos de luz não oferecem Já reguei.
+
+Veja os detalhes em [NOVO-2.0.md](NOVO-2.0.md). O fluxo de resposta utiliza [ForceReply e botões da API oficial](https://core.telegram.org/bots/api#forcereply).
 
 ## Indicador da conexão
 

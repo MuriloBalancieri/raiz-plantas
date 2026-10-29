@@ -94,7 +94,7 @@ public partial class MainForm {
     PlotterPanel dockPlotter,largePlotter;Form plotterWindow;
     void UpdatePlotters(){string scope=(store.Settings.ActiveId??"")+"|"+Json.Write(store.Settings.Calibration);if(dockPlotter!=null&&!dockPlotter.IsDisposed)dockPlotter.RefreshData(samples,store.Settings.Calibration,Active==null?null:Active.Name,scope,demo);if(largePlotter!=null&&!largePlotter.IsDisposed)largePlotter.RefreshData(samples,store.Settings.Calibration,Active==null?null:Active.Name,scope,demo);}
     void OpenPlotter() {
-        if(plotterWindow!=null&&!plotterWindow.IsDisposed){plotterWindow.Activate();return;}
+        if(plotterWindow!=null&&!plotterWindow.IsDisposed){plotterWindow.Show();plotterWindow.Activate();return;}
         plotterWindow=new Form{Text="Raiz · Plotter serial ao vivo",Size=new Size(1060,620),MinimumSize=new Size(850,390),StartPosition=FormStartPosition.CenterParent,BackColor=Color.White};
         largePlotter=new PlotterPanel(true);plotterWindow.Controls.Add(largePlotter);plotterWindow.FormClosed+=(s,e)=>{largePlotter=null;plotterWindow=null;};plotterWindow.Show(this);UpdatePlotters();
     }

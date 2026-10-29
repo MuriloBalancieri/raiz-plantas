@@ -4,7 +4,9 @@ Esta cópia foi preparada para o GitHub privado. O arquivo `configuracao-inicial
 
 # Raiz — monitor de plantas para Windows
 
-Versão 1.8 · 29/10/2026
+Os seis novos recursos da versão 2.0 estão descritos em [NOVO-2.0.md](NOVO-2.0.md).
+
+Versão 2.0 · 29/10/2026
 
 Aplicativo local que reúne solo e luminosidade do Arduino, cuidados da espécie e clima externo da cidade. A rega é manual.
 
@@ -189,7 +191,7 @@ O app compara os sensores calibrados com as faixas do vaso e mostra a orientaç�
 
 ## Histórico e dados privados
 
-A pasta **Dados** contém os itens abaixo. Na instalação portátil ela é criada ao lado do executável; nesta atualização local a versão 1.8 continua usando a pasta original. Use **Histórico → Abrir pasta de dados** para localizar os arquivos.
+A pasta **Dados** contém os itens abaixo. Na instalação portátil ela é criada ao lado do executável; nesta atualização local a versão 2.0 continua usando a pasta original. Use **Histórico → Abrir pasta de dados** para localizar os arquivos.
 
 - `configuracao.json`: plantas, cidade, calibração, limites, último clima, referência de luz e regas informadas. Alterações são salvas com uma cópia anterior `.bak`.
 - `historico.csv`: leituras reais de todas as sessões, identificação do perfil ativo e contexto meteorológico. Demonstrações não são gravadas.

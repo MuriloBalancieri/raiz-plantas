@@ -27,6 +27,8 @@ public class TelegramConnectionState {
     }
 }
 public class TelegramOptions {
+    public bool LightAlertsEnabled {get;set;}
+    public TelegramOptions(){LightAlertsEnabled=true;}
     public bool Enabled {get;set;} public bool PollEnabled {get;set;} public long NextOffset {get;set;}
     public string BotFingerprint {get;set;} public DateTime? LastUpdateUtc {get;set;}
 }
@@ -37,12 +39,14 @@ public class TelegramSecrets {
     public bool Paired {get {return BotId>0&&ChatId>0&&UserId>0&&PairedUtc.HasValue;}}
 }
 public class TelegramUpdate {
+    public long ReplyToMessageId {get;set;} public long ReplyToBotId {get;set;}
     public long UpdateId {get;set;} public string Kind {get;set;} public long ChatId {get;set;} public long UserId {get;set;}
     public bool PrivateChat {get;set;} public bool FromBot {get;set;} public string Text {get;set;}
     public string CallbackId {get;set;} public string Data {get;set;} public long MessageId {get;set;}
     public long MessageBotId {get;set;} public DateTime? MessageUtc {get;set;}
 }
 public class TelegramApplyResult {
+    public bool Handled {get;set;} public string ReplyKind {get;set;} public string ReplyEventId {get;set;}
     public bool PairedNow {get;set;} public bool SecretChanged {get;set;} public bool WateringAdded {get;set;}
     public bool Answer {get;set;} public string Feedback {get;set;}
 }
@@ -73,7 +77,7 @@ public static class TelegramRules {
             } else {
                 var message=Json.Map(Json.Get(root,"message"));var chat=Json.Map(Json.Get(message,"chat"));var user=Json.Map(Json.Get(message,"from"));
                 if(message.Count>0) {
-                    u.Kind="message";u.ChatId=Id(Json.Get(chat,"id"));u.UserId=Id(Json.Get(user,"id"));u.PrivateChat=Json.Str(Json.Get(chat,"type"))=="private";u.FromBot=object.Equals(Json.Get(user,"is_bot"),true);u.Text=Json.Str(Json.Get(message,"text"));
+                    u.Kind="message";u.ChatId=Id(Json.Get(chat,"id"));u.UserId=Id(Json.Get(user,"id"));u.PrivateChat=Json.Str(Json.Get(chat,"type"))=="private";u.FromBot=object.Equals(Json.Get(user,"is_bot"),true);u.Text=Json.Str(Json.Get(message,"text"));var reply=Json.Map(Json.Get(message,"reply_to_message"));u.ReplyToMessageId=Id(Json.Get(reply,"message_id"));u.ReplyToBotId=Id(Json.Get(Json.Map(Json.Get(reply,"from")),"id"));
                     long seconds;try{if(long.TryParse(Json.Str(Json.Get(message,"date")),out seconds))u.MessageUtc=WhatsAppRules.Epoch.AddSeconds(seconds);}catch{}
                 }
             }
@@ -82,6 +86,7 @@ public static class TelegramRules {
         return updates.OrderBy(x=>x.UpdateId).ToList();
     }
     public static TelegramApplyResult Apply(Settings settings,TelegramSecrets s,TelegramUpdate u,Sample sample,Calibration cal,DateTime now) {
+        var extra=TelegramWater.Apply(settings,s,u,sample,cal,now);if(extra.Handled)return extra;
         var r=new TelegramApplyResult();
         if(u.Kind=="message"&&!s.Paired&&s.PairExpiresUtc.HasValue&&now<=s.PairExpiresUtc.Value&&s.PairFailures<5&&u.PrivateChat&&!u.FromBot&&u.ChatId>0&&u.ChatId==u.UserId&&u.MessageUtc.HasValue&&u.MessageUtc>=now.AddMinutes(-10)&&u.MessageUtc<=now.AddMinutes(5)) {
             var m=Regex.Match((u.Text??"").Trim(),@"^/start\s+([0-9]{8})$");
@@ -97,14 +102,15 @@ public static class TelegramRules {
         r.Answer=true;r.Feedback="Este aviso não está mais ativo. Confira os registros no app.";
         string payload=u.Data.Substring(Prefix.Length);
         var e=settings.Notifications.LastOrDefault(x=>NotificationEngine.Channel(x)=="Telegram"&&x.Id==payload);
-        if(e==null||e.SenderHash!=WhatsAppRules.Hash(s.BotId.ToString(CultureInfo.InvariantCulture))||e.RecipientHash!=WhatsAppRules.Hash(s.ChatId.ToString(CultureInfo.InvariantCulture)))return r;
+        if(e==null||e.Kind=="light"||e.SenderHash!=WhatsAppRules.Hash(s.BotId.ToString(CultureInfo.InvariantCulture))||e.RecipientHash!=WhatsAppRules.Hash(s.ChatId.ToString(CultureInfo.InvariantCulture)))return r;
         if(!string.IsNullOrEmpty(e.MetaMessageId)&&e.MetaMessageId!="tg:"+u.MessageId.ToString(CultureInfo.InvariantCulture))return r;
-        if(e.ConfirmedUtc.HasValue){r.Feedback=e.IsTest?"Teste já confirmado. Nenhuma rega real foi criada.":"Essa rega já está registrada no Raiz.";return r;}
+        if(e.ConfirmedUtc.HasValue){if(!e.IsTest&&(e.QuantityState=="choice_pending"||e.QuantityState=="prompt_pending"||e.QuantityState=="drainage_pending")&&e.FollowupAttempts<3&&(!e.LastFollowupUtc.HasValue||now-e.LastFollowupUtc.Value>=TimeSpan.FromMinutes(1))){r.ReplyEventId=e.Id;r.ReplyKind=e.QuantityState=="choice_pending"?"quantity_choice":e.QuantityState=="prompt_pending"?"quantity_prompt":"drainage";e.FollowupAttempts++;e.LastFollowupUtc=now;}r.Feedback=e.IsTest?"Teste já confirmado. Nenhuma rega real foi criada.":"Essa rega já está registrada no Raiz.";return r;}
         if((e.ClosedUtc.HasValue&&e.State!="resolved")||now-e.CreatedUtc>TimeSpan.FromDays(7)||e.CreatedUtc>now.AddMinutes(5))return r;
-        if(!e.IsTest&&settings.Notifications.Any(x=>NotificationEngine.Channel(x)=="Telegram"&&!x.IsTest&&x.PlantId==e.PlantId&&x.CreatedUtc>e.CreatedUtc))return r;
+        if(!e.IsTest&&settings.Notifications.Any(x=>x.Kind!="light"&&NotificationEngine.Channel(x)=="Telegram"&&!x.IsTest&&x.PlantId==e.PlantId&&x.CreatedUtc>e.CreatedUtc))return r;
         var p=settings.Plants.Find(x=>x.LocalId==e.PlantId);if(p==null)return r;
         if(!e.IsTest)r.WateringAdded=CareEngine.ConfirmAlreadyWatered(p,settings.ActiveId==p.LocalId?sample:null,cal,"Telegram","tg:"+u.CallbackId,now,now);
         e.ConfirmedUtc=now;e.ConfirmMessageId=u.CallbackId;e.State="confirmed";e.Detail=e.IsTest?"Botão de teste recebido pelo Telegram; sem rega real.":"Já reguei recebido pelo Telegram e salvo nos logs.";
+        if(!e.IsTest&&r.WateringAdded){var record=TelegramWater.Record(settings,e);if(record!=null&&record.InitialReadingUnknown&&now-e.CreatedUtc<=TimeSpan.FromHours(2)&&e.AlertSoilIndex.HasValue&&e.AlertDry==cal.Dry&&e.AlertWet==cal.Wet){record.InitialIndex=e.AlertSoilIndex.Value;record.InitialReadingUnknown=false;}if(record!=null&&record.VolumeUnknown){e.QuantityState="choice_pending";e.FollowupAttempts=1;e.LastFollowupUtc=now;r.ReplyKind="quantity_choice";r.ReplyEventId=e.Id;}}
         if(!e.IsTest)NotificationEngine.AcknowledgeCycle(settings,p.LocalId,now,"Rega já confirmada em um canal vinculado.");
         r.Feedback=e.IsTest?"Teste recebido. Nenhuma rega real foi criada.":"Rega registrada no Raiz. Obrigado!";return r;
     }
@@ -113,6 +119,7 @@ public static class TelegramRules {
         var e=new NotificationEvent{Channel="Telegram",Id=Guid.NewGuid().ToString("N"),PlantId=p.LocalId,PlantName=p.Name,CreatedUtc=now,State="prepared",IsTest=test,RecipientHash=WhatsAppRules.Hash(s.ChatId.ToString(CultureInfo.InvariantCulture)),SenderHash=WhatsAppRules.Hash(s.BotId.ToString(CultureInfo.InvariantCulture))};settings.Notifications.Add(e);return e;
     }
     public static object Alert(TelegramSecrets s,NotificationEvent e,double? index,int? ml) {
+        if(e.Kind=="light")return new{chat_id=s.ChatId,text="Pouca luz para "+e.PlantName+". A leitura ficou abaixo da referência local por pelo menos 5 minutos durante o dia. Confira sombras e a posição junto à janela. O LDR compara sua referência; não mede lux nem horas de sol. Não é um aviso de rega."};
         string text=e.IsTest?"TESTE do Raiz — "+e.PlantName+"\nEsta mensagem verifica a configuração. O botão não cria uma rega real.":"Sua planta "+e.PlantName+" atingiu o gatilho local de rega.\nÍndice relativo: "+(index.HasValue?index.Value.ToString("0",CultureInfo.InvariantCulture)+"%":"indisponível")+". Confira o substrato antes de regar.\n"+(ml.HasValue?"Água: cerca de "+ml.Value+" mL, estimativa aprendida. Pare ao começar a drenar.":"Sem dose aprendida: primeira porção experimental de 30 mL; total desconhecido.")+"\nDepois da rega, toque em Já reguei para registrar.";
         return new{chat_id=s.ChatId,text=text,reply_markup=new{inline_keyboard=new[]{new[]{new{text="Já reguei",callback_data=Prefix+e.Id}}}}};
     }
@@ -153,7 +160,7 @@ public class TelegramTransport:IDisposable {
             var message=Json.Map(await Call(s.Token,"sendMessage",TelegramRules.Alert(s,e,index,ml)).ConfigureAwait(false));long id=TelegramRules.Id(Json.Get(message,"message_id"));
             long chat=TelegramRules.Id(Json.Get(Json.Map(Json.Get(message,"chat")),"id"));
             if(id<=0||chat!=s.ChatId)return new SendResult{State="uncertain",Detail="Resposta sem identificação do chat esperado. Confira o Telegram antes de repetir."};
-            return new SendResult{State="sent",MessageId="tg:"+id.ToString(CultureInfo.InvariantCulture),Detail="Mensagem criada pelo Telegram. A confirmação de rega chega ao tocar no botão."};
+            return new SendResult{State="sent",MessageId="tg:"+id.ToString(CultureInfo.InvariantCulture),Detail=e.Kind=="light"?"Aviso de pouca luz criado pelo Telegram.":"Mensagem criada pelo Telegram. A confirmação de rega chega ao tocar no botão."};
         }catch(TelegramApiException ex){return new SendResult{State=ex.Code==0||ex.Code>=500?"uncertain":"failed",RetryAllowed=ex.Code==429,RetryAfterSeconds=ex.RetryAfter,Detail=ex.Code==0?"Envio ao Telegram com resultado indefinido. Confira o celular; não haverá repetição automática.":ex.Message};}
     }
     public async Task Answer(TelegramSecrets s,string callbackId,string feedback){await Call(s.Token,"answerCallbackQuery",new{callback_query_id=callbackId,text=feedback,show_alert=false}).ConfigureAwait(false);}

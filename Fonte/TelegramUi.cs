@@ -17,10 +17,15 @@ public partial class MainForm {
         if(Active!=null&&NotificationEngine.ResolveIfMoist(store.Settings,Active,store.Settings.Calibration,samples,DateTime.UtcNow))Save();
         if(!telegramReading&&!telegramConfiguring&&!telegramReadPaused&&store.Settings.Telegram.PollEnabled&&DateTime.UtcNow>=telegramNextRead)ReadTelegram();
         if(telegramSending||telegramConfiguring||telegramReadPaused||!store.Settings.Telegram.Enabled||!telegramSecrets.Paired||Active==null)return;
-        var report=CurrentCareReport();if(!report.CanStartWatering)return;
-        var e=NotificationEngine.Active(store.Settings,Active.LocalId,"Telegram");
-        if(e==null){e=TelegramRules.Prepare(store.Settings,Active,telegramSecrets,DateTime.UtcNow);try{store.Save();}catch{Status("Não foi possível salvar o alerta. Envio ao Telegram não iniciado.");return;}}
-        if(NotificationEngine.CanAttempt(e,DateTime.UtcNow))await DispatchTelegram(e,report);
+        var report=CurrentCareReport();
+        if(LightAlerts.Recover(store.Settings,Active,last,samples,DateTime.UtcNow))Save();
+        if(report.CanStartWatering){
+            var water=NotificationEngine.Active(store.Settings,Active.LocalId,"Telegram");
+            if(water==null){water=TelegramRules.Prepare(store.Settings,Active,telegramSecrets,DateTime.UtcNow);try{store.Save();}catch{return;}}
+            if(NotificationEngine.CanAttempt(water,DateTime.UtcNow)){await DispatchTelegram(water,report);return;}
+        }
+        var light=LightAlerts.Prepare(store.Settings,Active,telegramSecrets,last,samples,DateTime.UtcNow);
+        if(light!=null&&NotificationEngine.CanAttempt(light,DateTime.UtcNow))await DispatchTelegram(light,null);
     }
     async void ReadTelegram() {
         telegramReading=true;int generation=telegramGeneration;var secret=telegramSecrets;long previousOffset=store.Settings.Telegram.NextOffset;
@@ -31,8 +36,10 @@ public partial class MainForm {
             telegramConnection.Success(DateTime.UtcNow);
             bool secretChanged=false,paired=false,watered=false;
             var answers=new System.Collections.Generic.List<System.Tuple<string,string>>();
+            var followups=new System.Collections.Generic.List<TelegramApplyResult>();
             foreach(var u in updates) {
                 var result=TelegramRules.Apply(store.Settings,secret,u,last,store.Settings.Calibration,DateTime.UtcNow);
+                if(!string.IsNullOrEmpty(result.ReplyKind))followups.Add(result);
                 secretChanged|=result.SecretChanged;paired|=result.PairedNow;watered|=result.WateringAdded;
                 if(result.Answer)answers.Add(System.Tuple.Create(u.CallbackId,result.Feedback));
                 store.Settings.Telegram.NextOffset=Math.Max(store.Settings.Telegram.NextOffset,u.UpdateId+1);
@@ -44,6 +51,7 @@ public partial class MainForm {
             else if(updates.Count>0)telegramStatus="Respostas do Telegram verificadas.";
             UpdateCareCards();RefreshWateringGrid();UpdateTelegramPage();UpdateWhatsAppPage();
             foreach(var answer in answers){try{await telegramTransport.Answer(secret,answer.Item1,answer.Item2);}catch{telegramStatus="Registro salvo; não foi possível mostrar a confirmação no Telegram.";}}
+            foreach(var followup in followups.GroupBy(x=>x.ReplyEventId).Select(g=>g.Last()))await SendWaterFollowup(secret,followup);
             if(paired)try{await telegramTransport.Call(secret.Token,"sendMessage",new{chat_id=secret.ChatId,text="Seu Telegram foi vinculado ao Raiz. Ative os avisos no app do computador para receber alertas de rega."});}catch{telegramStatus="Vínculo salvo. A mensagem de boas-vindas não pôde ser enviada.";}
             telegramNextRead=DateTime.UtcNow.AddSeconds(1);
         }catch(TelegramApiException ex){if(generation==telegramGeneration&&!closing){telegramConnection.Failure(ex.Code);telegramStatus=ex.Message;telegramNextRead=DateTime.UtcNow.AddSeconds(Math.Max(30,ex.RetryAfter));if(ex.Code==401||ex.Code==403||ex.Code==409)telegramReadPaused=true;UpdateTelegramPage();}}
@@ -53,6 +61,7 @@ public partial class MainForm {
     async Task DispatchTelegram(NotificationEvent e,CareReport report) {
         telegramSending=true;int generation=telegramGeneration;var secret=telegramSecrets;
         try {
+            if(e.Kind!="light"&&!e.IsTest&&!e.AlertSoilIndex.HasValue&&last!=null&&CareEngine.ReliableSoil(last,store.Settings.Calibration,DateTime.UtcNow)){e.AlertSoilIndex=store.Settings.Calibration.Soil(last.Soil);e.AlertDry=store.Settings.Calibration.Dry;e.AlertWet=store.Settings.Calibration.Wet;}
             e.Attempts++;e.LastAttemptUtc=DateTime.UtcNow;e.State="sending";e.Detail="Envio ao Telegram em andamento.";store.Save();UpdateTelegramPage();
             double? index=last==null?null:store.Settings.Calibration.Soil(last.Soil);
             var result=await telegramTransport.Send(secret,e,index,report==null?null:report.EstimatedMl);
@@ -73,6 +82,7 @@ public partial class MainForm {
             if(demo||telegramSending||telegramConfiguring||!telegramSecrets.Paired||Active==null){MessageBox.Show(this,"Saia da demonstração, escolha a planta e conclua o vínculo antes de testar.");return;}
             var test=TelegramRules.Prepare(store.Settings,Active,telegramSecrets,DateTime.UtcNow,true);await DispatchTelegram(test,null);
         })),56);
+        var lightOption=new CheckBox{Text="Avisar também sobre pouca luz",AutoSize=true,Checked=store.Settings.Telegram.LightAlertsEnabled};lightOption.CheckedChanged+=(s,e)=>{store.Settings.Telegram.LightAlertsEnabled=lightOption.Checked;Save();};Add(stack,Buttons(lightOption),52);
         Disclosure(stack,telegramSecrets.Paired?"Conexão do Telegram · alterar ou reconectar":"Conectar meu Telegram",setup=>{
             Note(setup,"Conectar seu celular","No Telegram, abra @BotFather e envie /newbot. Cole o token abaixo e salve. Depois, envie ao seu bot o comando de vínculo mostrado no cartão acima. Não compartilhe seu token.");
         var token=Theme.Input("",340);token.UseSystemPasswordChar=true;token.AccessibleName="Token do bot Telegram";
@@ -87,7 +97,7 @@ public partial class MainForm {
                 if(!valid.Paired)TelegramRules.BeginPairing(valid,DateTime.UtcNow);
                 if(!same)foreach(var old in store.Settings.Notifications.Where(n=>NotificationEngine.Channel(n)=="Telegram"&&!n.ClosedUtc.HasValue)){old.ClosedUtc=DateTime.UtcNow;old.State="superseded";old.Detail="Bot alterado; aviso anterior encerrado.";}
                 var oldOptions=store.Settings.Telegram;store.SaveTelegramSecrets(valid);telegramSecrets=valid;
-                store.Settings.Telegram=new TelegramOptions{Enabled=same&&oldOptions.Enabled,PollEnabled=true,NextOffset=same?oldOptions.NextOffset:0,BotFingerprint=WhatsAppRules.Hash(value),LastUpdateUtc=same?oldOptions.LastUpdateUtc:null};
+                store.Settings.Telegram=new TelegramOptions{Enabled=same&&oldOptions.Enabled,LightAlertsEnabled=!same||oldOptions.LightAlertsEnabled,PollEnabled=true,NextOffset=same?oldOptions.NextOffset:0,BotFingerprint=WhatsAppRules.Hash(value),LastUpdateUtc=same?oldOptions.LastUpdateUtc:null};
                 NotificationEngine.ResetFailed(store.Settings,DateTime.UtcNow,"Telegram");store.Save();telegramReadPaused=false;telegramNextRead=DateTime.MinValue;telegramConnection.Success(DateTime.UtcNow);token.Clear();telegramStatus=valid.Paired?"Bot validado; vínculo anterior preservado.":"Bot validado. Envie o comando de vínculo no seu celular.";UpdateTelegramPage();
             }catch(Exception ex){telegramStatus=ex is ApiException?ex.Message:"Não foi possível salvar a configuração do Telegram.";ShowError(ex);UpdateTelegramPage();}
             finally{telegramConfiguring=false;if(!button.IsDisposed)button.Enabled=true;UpdateTelegramPage();}
@@ -121,7 +131,7 @@ public partial class MainForm {
         if(telegramReadPaused){title="Recepção do Telegram precisa de atenção";body=telegramStatus;}
         telegramCard.Set(new Advice(title,body,s.Paired&&store.Settings.Telegram.Enabled&&!telegramReadPaused?"ok":"pending"));
         if(telegramGrid==null||telegramGrid.IsDisposed)return;var list=store.Settings.Notifications.Where(n=>NotificationEngine.Channel(n)=="Telegram").OrderByDescending(n=>n.CreatedUtc).Take(50).ToList();string sig=Json.Write(list);if(sig==telegramGridSignature)return;telegramGridSignature=sig;telegramGrid.Rows.Clear();
-        foreach(var n in list)telegramGrid.Rows.Add(n.CreatedUtc.ToLocalTime().ToString("dd/MM HH:mm:ss"),(n.IsTest?"[TESTE] ":"")+n.PlantName,n.State=="sent"?"Criada no Telegram":StateText(n.State),n.Detail);
+        foreach(var n in list)telegramGrid.Rows.Add(n.CreatedUtc.ToLocalTime().ToString("dd/MM HH:mm:ss"),(n.IsTest?"[TESTE] ":n.Kind=="light"?"[LUZ] ":"")+n.PlantName,n.State=="resolved"&&n.Kind=="light"?"Luz recuperada":n.State=="sent"?"Criada no Telegram":StateText(n.State),n.Detail);
     }
     void OpenTelegramBot() {
         if(string.IsNullOrEmpty(telegramSecrets.BotUsername)){MessageBox.Show(this,"Salve e valide o token do bot primeiro.");return;}
