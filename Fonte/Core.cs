@@ -64,6 +64,7 @@ public class Plant {
     public override string ToString() {return Name + (string.IsNullOrEmpty(Scientific) ? "" : " · " + Scientific);}
 }
 public class Settings {
+    public bool SkipInitialCredentialImport {get;set;}
     public bool CloseToTray {get;set;} public bool BackgroundChoiceMade {get;set;} public bool SetupDismissed {get;set;}
     public List<DateTime> CalibrationChanges {get;set;}
     public List<Plant> Plants {get;set;} public string ActiveId {get;set;}

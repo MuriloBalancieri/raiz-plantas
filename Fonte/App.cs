@@ -86,7 +86,7 @@ public partial class MainForm : Form {
             string captured=name;string label=name=="Visão geral"?"Hoje":name=="Minha planta"?"Minha planta":name=="Cuidados e rega"?"Cuidados":name=="Telegram e avisos"?"Avisos":name=="Arduino e calibração"?"Sensores":name;var b=new Button{Text=label,Location=new Point(14,y),Size=new Size(177,44),FlatStyle=FlatStyle.Flat,ForeColor=Color.White,BackColor=Theme.Side,TextAlign=ContentAlignment.MiddleLeft,Font=Theme.F(10),Cursor=Cursors.Hand,Tag=name};
             b.FlatAppearance.BorderSize=0;b.Click+=(s,e)=>Navigate(captured);side.Controls.Add(b);y+=46;
         }
-        var bottom=new Label{Text="Um vaso por vez.\nSensores + cuidados + clima.\n\nVersão 2.0 · Windows",ForeColor=Color.FromArgb(169,196,175),Font=Theme.F(9),Dock=DockStyle.Bottom,Height=110,Padding=new Padding(24,12,10,0)};side.Controls.Add(bottom);
+        var bottom=new Label{Text="Um vaso por vez.\nSensores + cuidados + clima.\n\nVersão 2.1 · Windows",ForeColor=Color.FromArgb(169,196,175),Font=Theme.F(9),Dock=DockStyle.Bottom,Height=110,Padding=new Padding(24,12,10,0)};side.Controls.Add(bottom);
         content.Dock=DockStyle.Fill;content.Margin=Padding.Empty;content.Padding=new Padding(28,24,24,20);shell.Controls.Add(content,1,0);
         dockPlotter=new PlotterPanel(false){Margin=new Padding(28,0,25,5)};dockPlotter.OpenRequested+=(s,e)=>OpenPlotter();shell.Controls.Add(dockPlotter,1,1);
         footer=new Label{Dock=DockStyle.Fill,Text="Tudo começa com uma leitura confiável.",Font=Theme.F(9),ForeColor=Theme.Muted,Padding=new Padding(28,6,0,0),Margin=Padding.Empty};shell.Controls.Add(footer,1,2);
@@ -140,6 +140,7 @@ public partial class MainForm : Form {
     void Dashboard(TableLayoutPanel stack) {
         Heading(stack,"Como está sua planta?","Solo, luz e o próximo cuidado — tudo em um só lugar.");
         mainRecommendation=new DecisionCard();Add(stack,mainRecommendation,130);
+        AddSensorHealth(stack,true);
         var banner=Theme.Card();banner.BackColor=Color.FromArgb(228,239,224);
         contextLabel=Theme.Label("",15,null,true);contextLabel.Location=new Point(20,14);contextLabel.AutoEllipsis=true;contextLabel.AutoSize=false;contextLabel.Height=30;banner.Controls.Add(contextLabel);
         connectionLabel=Theme.Label("",9,Theme.Muted);connectionLabel.Location=new Point(20,49);connectionLabel.AutoSize=false;connectionLabel.Height=38;banner.Controls.Add(connectionLabel);
@@ -165,6 +166,7 @@ public partial class MainForm : Form {
     void UpdateDashboard() {
         if(soilMetric==null||soilMetric.IsDisposed)return;
         var p=Active;var w=store.Settings.Weather;var now=DateTime.UtcNow;
+        UpdateSensorHealth();
         if(mainRecommendation!=null)mainRecommendation.Set(DailyRecommendation.Get(p,last,CurrentCareReport(),demo,now));
         contextLabel.Text=demo?"DEMONSTRAÇÃO · leituras simuladas":p==null?"Sua primeira planta começa aqui":p.Name;
         connectionLabel.Text=(demo?"Sensores fictícios · não gravados no histórico":last!=null&&last.Fresh(now)?"Sensores recebendo dados · "+last.Utc.ToLocalTime().ToString("HH:mm:ss"):"Sensores sem leitura atual")+"   |   "+(store.Settings.Location==null?"Guarulhos, SP · aguardando consulta":store.Settings.Location.ToString());
@@ -297,6 +299,7 @@ public partial class MainForm : Form {
             Connect(ports.SelectedItem.ToString());
         },true),Theme.Button("Desconectar",(s,e)=>{Disconnect();Status("Arduino desconectado.");})),52);
         connectionLabel=Theme.Label("",11,Theme.Muted);Add(stack,connectionLabel,55);UpdateConnection();
+        AddSensorHealth(stack);
         var c=store.Settings.Calibration;
         Note(stack,"Referências dos sensores","Solo: seco = "+(c.Dry.HasValue?c.Dry.ToString():"pendente")+" · úmido = "+(c.Wet.HasValue?c.Wet.ToString():"pendente")+"\nLuz: escuro = "+(c.Dark.HasValue?c.Dark.ToString():"pendente")+" · claro = "+(c.Bright.HasValue?c.Bright.ToString():"pendente")+"\nA calibração pertence a esta montagem. Repita ao mudar sensor ou substrato.",130);
         Add(stack,Buttons(Theme.Button("Calibrar solo e luz",(s,e)=>CalibrationDialog(),true),Theme.Button("Abrir pasta do programa Arduino",(s,e)=>OpenFolder(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Arduino")))),48);
@@ -310,14 +313,14 @@ public partial class MainForm : Form {
         connectionLabel.Text=(demo?"DEMONSTRAÇÃO · Arduino desconectado":serial!=null&&serial.IsOpen?"Conectado em "+serial.PortName:"Arduino desconectado")+(last==null?" · aguardando leituras":"\nÚltima leitura"+(demo?" SIMULADA":"")+": solo "+last.Soil+" · luz "+last.Light+" · "+last.Utc.ToLocalTime().ToString("HH:mm:ss")+(last.Fresh(DateTime.UtcNow)?"":" · ANTIGA"));
     }
     void Connect(string portName) {
-        Disconnect();last=null;samples.Clear();
+        Disconnect();last=null;samples.Clear();invalidSensorUtc=null;
         try {
             var port=new SerialPort(portName,9600){ReadTimeout=1000,DtrEnable=true,Encoding=Encoding.ASCII};port.Open();serial=port;
             store.Settings.Port=portName;Save();int generation=serialGeneration;Status("Arduino conectado. Aguardando reinicialização e leituras…");
             Task.Run(()=> {
                 var parser=new SensorParser();
                 while(generation==serialGeneration) {
-                    try {string line=port.ReadLine();var sample=parser.Parse(line,DateTime.UtcNow);if(sample!=null)Ui(()=>{if(generation==serialGeneration)Accept(sample);});}
+                    try {string line=port.ReadLine();var now=DateTime.UtcNow;var sample=parser.Parse(line,now);Ui(()=>{if(generation==serialGeneration){ObserveSensorLine(line,sample,now);if(sample!=null)Accept(sample);}});}
                     catch(TimeoutException){}catch {if(generation==serialGeneration)Ui(()=>{if(generation==serialGeneration){Disconnect();Status("Conexão USB interrompida. Confira o cabo e conecte novamente.");}});break;}
                 }
             });UpdateConnection();
@@ -329,7 +332,7 @@ public partial class MainForm : Form {
         var weather=store.Settings.Weather;sample.Daylight=weather!=null&&weather.Fresh(sample.Utc)?weather.IsDay:null;
         last=sample;samples.Add(sample);if(samples.Count>10000)samples.RemoveAt(0);
         if(!demo)try{store.Append(sample,Active,store.Settings.Weather,store.Settings.Location,store.Settings.Calibration);}catch{Status("Leitura recebida, mas não foi possível salvar o histórico. Confira a pasta Dados.");}
-        if(page=="Visão geral")UpdateDashboard();if(page=="Arduino e calibração")UpdateConnection();if(page=="Cuidados e rega")UpdateCareCards();if(trend!=null&&!trend.IsDisposed){trend.Samples=samples;trend.Invalidate();}UpdatePlotters();
+        if(page=="Visão geral")UpdateDashboard();if(page=="Arduino e calibração"){UpdateConnection();UpdateSensorHealth();}if(page=="Cuidados e rega")UpdateCareCards();if(trend!=null&&!trend.IsDisposed){trend.Samples=samples;trend.Invalidate();}UpdatePlotters();
     }
     void CalibrationDialog() {
         if(demo){MessageBox.Show(this,"Saia da demonstração para calibrar com leituras reais.");return;}
@@ -358,7 +361,7 @@ public partial class MainForm : Form {
     void ExportHistory() {
         if(!File.Exists(store.HistoryPath)){MessageBox.Show(this,"Ainda não há leituras reais salvas. Conecte o Arduino para iniciar o histórico.");return;}
         using(var dialog=new SaveFileDialog{Filter="Planilha CSV|*.csv",FileName="Raiz_historico_"+DateTime.Now.ToString("yyyy-MM-dd")+".csv"}) {
-            if(dialog.ShowDialog(this)!=DialogResult.OK)return;
+            if(dialog.ShowDialog(this)!=DialogResult.OK||!ExportPathAllowed(dialog.FileName))return;
             try{if(Path.GetFullPath(dialog.FileName)==Path.GetFullPath(store.HistoryPath))return;File.Copy(store.HistoryPath,dialog.FileName,true);Status("Histórico exportado.");}catch(Exception e){ShowError(e);}
         }
     }
@@ -367,6 +370,7 @@ public partial class MainForm : Form {
         Add(stack,Buttons(Theme.Button("Primeiros passos",(s,e)=>Navigate("Primeiros passos"))),56);
         var background=new CheckBox{Text="Ao fechar a janela, continuar perto do relógio do Windows",AutoSize=true,Checked=store.Settings.CloseToTray};background.CheckedChanged+=(s,e)=>{store.Settings.CloseToTray=background.Checked;store.Settings.BackgroundChoiceMade=true;Save();};Add(stack,Buttons(background),52);
         Add(stack,Buttons(Theme.Button("Configurar avisos no celular",(s,e)=>Navigate("Telegram e avisos"),true)),50);
+        AddTransferSettings(stack);
         Disclosure(stack,"Chave da API de plantas",apiSetup=>{
         Note(apiSetup,"Perenual · API de plantas","Você ainda pode usar clima e sensores sem uma chave. Para buscar espécies e importar seus cuidados, crie sua própria chave na Perenual. A disponibilidade das espécies e dos detalhes depende do plano da sua conta.",118);
         Add(apiSetup,Buttons(Theme.Button("Abrir cadastro da Perenual",(s,e)=>OpenUrl("https://perenual.com/docs/api"),true)),48);
@@ -382,7 +386,7 @@ public partial class MainForm : Form {
         Note(details,"Chave protegida no computador","A chave fica criptografada pelo Windows para este usuário. Ela é enviada apenas à Perenual nas consultas de plantas e não é incluída no histórico. Não envie a chave pelo chat nem distribua a pasta Dados.",110);
         Note(details,"Fontes e limites","Perenual: espécies, orientações de rega e luz. Open-Meteo: temperatura e umidade externas, com atribuição CC BY 4.0. Geocodificação: Open-Meteo / GeoNames. As consultas públicas de clima destinam-se ao uso não comercial conforme os termos do serviço.",126);
         Add(details,Buttons(Theme.Button("Documentação das plantas",(s,e)=>OpenUrl("https://perenual.com/docs/api")),Theme.Button("Documentação do clima",(s,e)=>OpenUrl("https://open-meteo.com/en/docs")),Theme.Button("Licença CC BY 4.0",(s,e)=>OpenUrl("https://creativecommons.org/licenses/by/4.0/"))),50);
-        Note(details,"Dados e manutenção","Use Histórico → Abrir pasta de dados para localizar configuração, referências e registros. Faça uma cópia dessa pasta para backup. Para mover as chaves para outro usuário Windows, cadastre-as novamente. O app envia avisos quando o Telegram ou WhatsApp está configurado e habilitado, mas a rega continua manual.",116);
+        Note(details,"Dados e manutenção","Use a transferência protegida acima para levar seus dados e conexões a outro computador. Preserve o arquivo e a senha separadamente. A pasta Dados contém registros privados; os arquivos protegidos pelo Windows só abrem no usuário de origem. A rega continua manual.",116);
         });
     }
     static void OpenUrl(string url){try{System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url){UseShellExecute=true});}catch{MessageBox.Show("Não foi possível abrir o navegador.");}}
@@ -396,7 +400,7 @@ public partial class MainForm : Form {
             int light=cal.Dark.HasValue&&cal.Bright.HasValue?(int)(cal.Dark.Value+(cal.Bright.Value-cal.Dark.Value)*(0.5+0.45*Math.Sin(tick/11.0))):(int)(460+160*Math.Sin(tick/11.0));
             Accept(new Sample{Soil=soil,Light=light,Utc=DateTime.UtcNow});
         }
-        if(page=="Visão geral")UpdateDashboard();if(page=="Arduino e calibração")UpdateConnection();if(page=="Cuidados e rega")UpdateCareCards();if(page=="WhatsApp e avisos")UpdateWhatsAppPage();UpdatePlotters();
+        if(page=="Visão geral")UpdateDashboard();if(page=="Arduino e calibração"){UpdateConnection();UpdateSensorHealth();}if(page=="Cuidados e rega")UpdateCareCards();if(page=="WhatsApp e avisos")UpdateWhatsAppPage();UpdatePlotters();
         if(page=="Telegram e avisos")UpdateTelegramPage();if(page=="Primeiros passos")UpdateSetup();if(page=="Histórico"&&tick%60==0)LoadDailyHistory();
         await RefreshSpecies();await PollTelegram();await PollWhatsApp();
         if(DateTime.UtcNow>=nextWeather&&!weatherBusy&&store.Settings.Location!=null)await RefreshWeather();

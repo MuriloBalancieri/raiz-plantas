@@ -14,7 +14,7 @@ public class InitialCredentialBundle {
 }
 public static class InitialCredentials {
     public static bool ImportFile(Store store,string path){
-        if(!File.Exists(path)||store.LoadWarning!=null)return false;
+        if(!File.Exists(path)||store.LoadWarning!=null||store.Settings.SkipInitialCredentialImport)return false;
         if(new FileInfo(path).Length>65536)throw new ApiException("Configuração inicial maior que o permitido.");
         InitialCredentialBundle bundle;try{bundle=Json.Read<InitialCredentialBundle>(File.ReadAllText(path,Encoding.UTF8));}catch{throw new ApiException("Não foi possível ler a configuração inicial.");}
         return Apply(store,bundle);

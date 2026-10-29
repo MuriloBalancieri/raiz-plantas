@@ -1,4 +1,4 @@
-﻿# Raiz 2.0
+# Raiz 2.1
 
 Aplicativo para Windows que reúne sensores de solo e luz do Arduino, orientações da espécie pela Perenual, clima da região e avisos de rega pelo Telegram.
 
@@ -19,6 +19,15 @@ O arquivo **configuracao-inicial.json contém credenciais reais em texto legíve
 Na primeira abertura, o app importa somente credenciais ausentes. Chaves existentes, calibração, plantas, registros e offset do Telegram são preservados. Depois da importação, a pasta local `Dados` usa a proteção do Windows; o arquivo inicial do repositório continua legível para permitir a instalação nos outros dispositivos. Não há envio das credenciais ao GitHub pelo aplicativo.
 
 Credenciais do WhatsApp, quando presentes, são importadas, mas seu envio e receptor ficam desativados até conferir o endereço HTTPS no novo dispositivo. O bot Telegram conserva seu vínculo, sem precisar gerar outro código.
+
+## Novo na 2.1
+
+- Resumo de secagem observada e faixa horária de maior luz no Histórico.
+- Diagnósticos de conexão, pacotes inválidos e sinais suspeitos.
+- Relatórios por período em PDF e CSV.
+- Transferência protegida por senha, com dados anteriores preservados.
+
+Veja [como usar os quatro recursos](NOVO-2.1.md). Para transferir seu histórico e suas conexões com proteção, prefira o arquivo .raiz gerado pelo app.
 
 ## Novo na 2.0
 
