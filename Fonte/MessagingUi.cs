@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ public partial class MainForm {
     WhatsAppSecrets whatsappSecrets=new WhatsAppSecrets();volatile string receiverFingerprint="";string receiverStatus="Receptor desativado";
     bool whatsappBusy;volatile bool closing;DecisionCard whatsappCard;DataGridView notificationGrid,wateringGrid;string notificationSignature="";
     void RestartWhatsAppReceiver() {
-        StopWhatsAppReceiver();whatsappSecrets=store.LoadWhatsAppSecrets();
+        StopWhatsAppReceiver();if(ExhibitPausesNotifications)return;whatsappSecrets=store.LoadWhatsAppSecrets();
         if(!store.Settings.WhatsApp.ReceiverEnabled){receiverStatus="Receptor desativado";return;}
         try {
             WhatsAppRules.ValidateReceiver(store.Settings.WhatsApp,whatsappSecrets);
@@ -54,6 +54,7 @@ public partial class MainForm {
         return webhook!=null&&store.Settings.WhatsApp.ReceiverEnabled&&store.Settings.WhatsApp.VerifiedUtc.HasValue&&store.Settings.WhatsApp.VerifiedConfig==WhatsAppRules.Fingerprint(store.Settings.WhatsApp,whatsappSecrets);
     }
     async Task PollWhatsApp() {
+        if(ExhibitPausesNotifications)return;
         if(closing||demo||Active==null)return;
         if(NotificationEngine.ResolveIfMoist(store.Settings,Active,store.Settings.Calibration,samples,DateTime.UtcNow))Save();
         if(whatsappBusy||!store.Settings.WhatsApp.Enabled||!WhatsAppReady())return;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +13,7 @@ public partial class MainForm {
     readonly TelegramConnectionState telegramConnection=new TelegramConnectionState();Label telegramConnectionLabel;
     void LoadTelegram(){telegramSecrets=store.LoadTelegramSecrets();telegramGeneration++;telegramReadPaused=false;telegramNextRead=DateTime.MinValue;telegramConnection.Reset();telegramStatus=telegramSecrets.Paired?"Seu celular está vinculado a este bot.":"Conclua o vínculo para receber os avisos.";}
     async Task PollTelegram() {
-        if(closing||demo)return;
+        if(closing||demo||ExhibitPausesNotifications)return;
         if(Active!=null&&NotificationEngine.ResolveIfMoist(store.Settings,Active,store.Settings.Calibration,samples,DateTime.UtcNow))Save();
         if(!telegramReading&&!telegramConfiguring&&!telegramReadPaused&&store.Settings.Telegram.PollEnabled&&DateTime.UtcNow>=telegramNextRead)ReadTelegram();
         if(telegramSending||telegramConfiguring||telegramReadPaused||!store.Settings.Telegram.Enabled||!telegramSecrets.Paired||Active==null)return;

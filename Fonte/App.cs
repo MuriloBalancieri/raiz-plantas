@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -82,11 +82,11 @@ public partial class MainForm : Form {
         side.Controls.Add(new Label{Text="raiz",Font=Theme.F(38,FontStyle.Bold),ForeColor=Color.White,AutoSize=true,Location=new Point(23,28)});
         side.Controls.Add(new Label{Text="CUIDADO COM CONTEXTO",Font=Theme.F(8),ForeColor=Color.FromArgb(166,197,172),AutoSize=true,Location=new Point(27,94)});
         int y=140;
-        foreach(string name in new[]{"Visão geral","Minha planta","Cuidados e rega","Telegram e avisos","Arduino e calibração","Histórico","Configurações"}) {
+        foreach(string name in new[]{"Visão geral","Apresentação","Minha planta","Cuidados e rega","Telegram e avisos","Arduino e calibração","Histórico","Configurações"}) {
             string captured=name;string label=name=="Visão geral"?"Hoje":name=="Minha planta"?"Minha planta":name=="Cuidados e rega"?"Cuidados":name=="Telegram e avisos"?"Avisos":name=="Arduino e calibração"?"Sensores":name;var b=new Button{Text=label,Location=new Point(14,y),Size=new Size(177,44),FlatStyle=FlatStyle.Flat,ForeColor=Color.White,BackColor=Theme.Side,TextAlign=ContentAlignment.MiddleLeft,Font=Theme.F(10),Cursor=Cursors.Hand,Tag=name};
             b.FlatAppearance.BorderSize=0;b.Click+=(s,e)=>Navigate(captured);side.Controls.Add(b);y+=46;
         }
-        var bottom=new Label{Text="Um vaso por vez.\nSensores + cuidados + clima.\n\nVersão 2.1 · Windows",ForeColor=Color.FromArgb(169,196,175),Font=Theme.F(9),Dock=DockStyle.Bottom,Height=110,Padding=new Padding(24,12,10,0)};side.Controls.Add(bottom);
+        var bottom=new Label{Text="Um vaso por vez.\nSensores + cuidados + clima.\n\nVersão 2.4.1 · Windows",ForeColor=Color.FromArgb(169,196,175),Font=Theme.F(9),Dock=DockStyle.Bottom,Height=110,Padding=new Padding(24,12,10,0)};side.Controls.Add(bottom);
         content.Dock=DockStyle.Fill;content.Margin=Padding.Empty;content.Padding=new Padding(28,24,24,20);shell.Controls.Add(content,1,0);
         dockPlotter=new PlotterPanel(false){Margin=new Padding(28,0,25,5)};dockPlotter.OpenRequested+=(s,e)=>OpenPlotter();shell.Controls.Add(dockPlotter,1,1);
         footer=new Label{Dock=DockStyle.Fill,Text="Tudo começa com uma leitura confiável.",Font=Theme.F(9),ForeColor=Theme.Muted,Padding=new Padding(28,6,0,0),Margin=Padding.Empty};shell.Controls.Add(footer,1,2);
@@ -94,7 +94,7 @@ public partial class MainForm : Form {
         FormClosing+=(s,e)=>{if(KeepInBackground(e))return;closing=true;if(backgroundIcon!=null){backgroundIcon.Visible=false;backgroundIcon.ContextMenuStrip.Dispose();backgroundIcon.Dispose();}telegramGeneration++;timer.Stop();Disconnect();StopWhatsAppReceiver();whatsappTransport.Dispose();telegramTransport.Dispose();try{store.Save();}catch{}};
         Shown+=async(s,e)=> {
             if(initialCredentialWarning!=null)MessageBox.Show(this,initialCredentialWarning,"Configuração inicial");
-            LoadTelegram();InitializeBackground();if(!store.Settings.SetupDismissed&&(Active==null||!store.Settings.Calibration.Soil(500).HasValue))Navigate("Primeiros passos");RestartWhatsAppReceiver();UpdatePlotters();try{store.SaveWateringLog();}catch{Status("Não foi possível atualizar o CSV de regas. Os registros da configuração foram preservados.");}
+            LoadTelegram();InitializeBackground();if(page!="Apresentação"&&!store.Settings.SetupDismissed&&(Active==null||!store.Settings.Calibration.Soil(500).HasValue))Navigate("Primeiros passos");RestartWhatsAppReceiver();UpdatePlotters();try{store.SaveWateringLog();}catch{Status("Não foi possível atualizar o CSV de regas. Os registros da configuração foram preservados.");}
             if(store.LoadWarning!=null)MessageBox.Show(this,store.LoadWarning,"Configuração preservada");
             if(store.Settings.Location==null) {
                 try {
@@ -124,11 +124,14 @@ public partial class MainForm : Form {
     void Heading(TableLayoutPanel stack,string title,string subtitle) {Add(stack,new PageHeading(title,subtitle),100);}
     void Note(TableLayoutPanel stack,string title,string body,int height=100) {var card=new ReadableCard();card.SetText(title,body);Add(stack,card,height);}
     void Navigate(string name) {
+        bool previousExhibitPause=ExhibitPausesNotifications;
+        ExhibitionTransition(name);
         page=name;mainRecommendation=null;setupGrid=null;setupProgress=null;historyGeneration++;content.SuspendLayout();foreach(Control old in content.Controls.Cast<Control>().ToArray())old.Dispose();content.Controls.Clear();soilMetric=null;adviceList=null;trend=null;contextLabel=null;connectionLabel=null;weatherStamp=null;careSoil=null;careWater=null;careLight=null;careSessionLabel=null;whatsappCard=null;notificationGrid=null;wateringGrid=null;speciesCareLabel=null;telegramCard=null;telegramGrid=null;telegramConnectionLabel=null;
+        if(previousExhibitPause!=ExhibitPausesNotifications)ChangeExhibitPause();
         foreach(Control c in side.Controls) if(c is Button)c.BackColor=(string)c.Tag==name?Color.FromArgb(46,86,63):Theme.Side;
         var stack=Stack(content);
         switch(name) {
-            case "Primeiros passos":SetupPage(stack);break;case "Visão geral":Dashboard(stack);break;case "Minha planta":PlantsPage(stack);break;
+            case "Apresentação":ExhibitionPage(stack);break;case "Primeiros passos":SetupPage(stack);break;case "Visão geral":Dashboard(stack);break;case "Minha planta":PlantsPage(stack);break;
             case "Cuidados e rega":CarePage(stack);break;
             case "Telegram e avisos":TelegramPage(stack);break;
             case "WhatsApp e avisos":WhatsAppPage(stack);break;
@@ -153,7 +156,8 @@ public partial class MainForm : Form {
         adviceList=new ActionRow{FlowDirection=FlowDirection.TopDown,WrapContents=false,BackColor=Theme.Bg,Margin=Padding.Empty};
         adviceList.Resize+=(s,e)=>{foreach(Control c in adviceList.Controls)c.Width=Math.Max(100,adviceList.ClientSize.Width-2);};
         Disclosure(stack,"Detalhes de solo, água e luz",details=>Add(details,adviceList,310));adviceSignature="";
-        Add(stack,Buttons(Theme.Button("Primeiros passos",(s,e)=>Navigate("Primeiros passos"))),56);
+        Add(stack,Buttons(Theme.Button("Apresentar o projeto",(s,e)=>Navigate("Apresentação"),true),Theme.Button("Primeiros passos",(s,e)=>Navigate("Primeiros passos"))),56);
+        Disclosure(stack,"Como ler os números?",details=>Note(details,"Uma escala da sua montagem","O Arduino envia números de 0 a 1023. A calibração transforma esses valores em uma comparação de 0 a 100% entre referências locais. No solo, 100% representa a referência úmida registrada; não é uma meta para manter a planta. A luz também é relativa: o LDR não mede lux.",140));
         Disclosure(stack,"Clima da região",details=>{
             var weatherRow=new TableLayoutPanel{ColumnCount=2,Margin=Padding.Empty};weatherRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));weatherRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,50));
             tempMetric=new Metric("TEMPERATURA EXTERNA","Clima da região",Theme.Ink);humidityMetric=new Metric("UMIDADE EXTERNA","Clima da região",Theme.Ink);weatherRow.Controls.Add(tempMetric,0,0);weatherRow.Controls.Add(humidityMetric,1,0);Add(details,weatherRow,155);
@@ -359,6 +363,7 @@ public partial class MainForm : Form {
     }
     static int? ParseAdc(string s){int n;if(string.IsNullOrWhiteSpace(s))return null;if(!int.TryParse(s,out n)||n<0||n>1023)throw new ApiException("Use valores inteiros entre 0 e 1023.");return n;}
     void ExportHistory() {
+        if(historyFiction){ExportDemoRaw();return;}
         if(!File.Exists(store.HistoryPath)){MessageBox.Show(this,"Ainda não há leituras reais salvas. Conecte o Arduino para iniciar o histórico.");return;}
         using(var dialog=new SaveFileDialog{Filter="Planilha CSV|*.csv",FileName="Raiz_historico_"+DateTime.Now.ToString("yyyy-MM-dd")+".csv"}) {
             if(dialog.ShowDialog(this)!=DialogResult.OK||!ExportPathAllowed(dialog.FileName))return;
@@ -402,6 +407,7 @@ public partial class MainForm : Form {
         }
         if(page=="Visão geral")UpdateDashboard();if(page=="Arduino e calibração"){UpdateConnection();UpdateSensorHealth();}if(page=="Cuidados e rega")UpdateCareCards();if(page=="WhatsApp e avisos")UpdateWhatsAppPage();UpdatePlotters();
         if(page=="Telegram e avisos")UpdateTelegramPage();if(page=="Primeiros passos")UpdateSetup();if(page=="Histórico"&&tick%60==0)LoadDailyHistory();
+        if(page=="Apresentação")UpdateExhibition();if(ExhibitPausesNotifications)await PollExhibitTest();
         await RefreshSpecies();await PollTelegram();await PollWhatsApp();
         if(DateTime.UtcNow>=nextWeather&&!weatherBusy&&store.Settings.Location!=null)await RefreshWeather();
     }
@@ -417,7 +423,7 @@ public static class Program {
             if(AppPaths.PreviousInstanceRunning(folder,Application.ExecutablePath)){MessageBox.Show("Feche a versão anterior do Raiz e abra esta versão novamente. Seus dados serão preservados.","Raiz já está aberto");return 0;}
             bool first;using(var mutex=new System.Threading.Mutex(true,AppPaths.MutexName(folder),out first)) {
                 if(!first){MessageBox.Show("O Raiz já está usando esta pasta de dados. Continue na janela que já está aberta.","Raiz já está aberto");return 0;}
-                Application.Run(new MainForm(folder));return 0;
+                var form=new MainForm(folder);if(args.Contains("--apresentar"))form.OpenPresentation();Application.Run(form);return 0;
             }
         }catch(ApiException e){MessageBox.Show(e.Message,"Raiz");return 1;}
         catch{MessageBox.Show("O Raiz não conseguiu iniciar. Extraia o pacote em uma pasta onde você possa salvar arquivos.","Raiz");return 1;}

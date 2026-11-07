@@ -82,7 +82,7 @@ public static class Tests {
         SpeciesTests.Run(Check,folder);
         UiTests.Run(Check,folder);
         InitialCredentialTests.Run(Check,folder);
-        FeatureTests.Run(Check,folder);InsightsTests.Run(Check,folder);
+        FeatureTests.Run(Check,folder);InsightsTests.Run(Check,folder);ExhibitionTests.Run(Check,folder);DemoHistoryTests.Run(Check,folder);
         Console.WriteLine("PASSOU: "+passed+" verificacoes");return 0;
     }
 }

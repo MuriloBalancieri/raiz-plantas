@@ -10,12 +10,12 @@ public partial class MainForm {
     }}
     bool ExportPathAllowed(string path){string target=Path.GetFullPath(path),folder=Path.GetFullPath(store.Folder).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;if(target.StartsWith(folder,StringComparison.OrdinalIgnoreCase)){MessageBox.Show(this,"Escolha uma pasta fora dos dados ativos para não substituir arquivos do app.","Local de exportação");return false;}return true;}
     async void ExportCareReport(bool pdf){
-        if(reportBusy)return;var plant=Active;if(plant==null){MessageBox.Show(this,"Escolha uma planta para gerar seu relatório.");return;}
+        if(reportBusy)return;bool fiction=historyFiction;DemoHistoryBundle bundle=null;if(fiction){try{bundle=await GetDemoHistory();if(closing)return;}catch(Exception ex){ShowError(ex);return;}}var plant=fiction?bundle.Plant:Active;if(plant==null){MessageBox.Show(this,"Escolha uma planta para gerar seu relatório.");return;}
         int days=historyPeriod==null||historyPeriod.IsDisposed?7:new[]{7,14,30}[historyPeriod.SelectedIndex];
         using(var dialog=new SaveFileDialog{Filter=pdf?"Relatório PDF|*.pdf":"Resumo CSV|*.csv",FileName="Raiz_relatorio_"+DateTime.Now.ToString("yyyy-MM-dd")+(pdf?".pdf":".csv")}){
             if(dialog.ShowDialog(this)!=DialogResult.OK||!ExportPathAllowed(dialog.FileName))return;
-            string path=dialog.FileName;var copy=Json.Read<Plant>(Json.Write(plant));var changes=store.Settings.CalibrationChanges.ToArray();var now=DateTime.UtcNow;reportBusy=true;Status("Preparando relatório dos últimos "+days+" dias…");
-            try{await Task.Run(()=>{var data=DailyHistory.Read(store.HistoryPath,copy.LocalId,copy.Care.Waterings,changes,days,now);if(pdf)CareReports.Pdf(path,copy,data,now);else CareReports.Csv(path,copy,data);});if(!closing)MessageBox.Show(this,"Relatório salvo em:\n"+path,"Relatório pronto");}
+            string path=dialog.FileName;var copy=Json.Read<Plant>(Json.Write(plant));var changes=fiction?new DateTime[0]:store.Settings.CalibrationChanges.ToArray();var now=fiction?bundle.EndUtc:DateTime.UtcNow;string historyPath=fiction?bundle.HistoryPath:store.HistoryPath;reportBusy=true;Status("Preparando relatório dos últimos "+days+" dias…");
+            try{await Task.Run(()=>{var data=DailyHistory.Read(historyPath,copy.LocalId,copy.Care.Waterings,changes,days,now,fiction);if(pdf)CareReports.Pdf(path,copy,data,fiction?DateTime.UtcNow:now);else CareReports.Csv(path,copy,data);});if(!closing)MessageBox.Show(this,"Relatório salvo em:\n"+path,"Relatório pronto");}
             catch(Exception ex){if(!closing)ShowError(ex);}finally{reportBusy=false;}
         }
     }

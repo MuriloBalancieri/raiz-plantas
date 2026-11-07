@@ -1,4 +1,4 @@
-# Raiz 2.1
+# Raiz 2.4.1
 
 Aplicativo para Windows que reúne sensores de solo e luz do Arduino, orientações da espécie pela Perenual, clima da região e avisos de rega pelo Telegram.
 
@@ -19,6 +19,23 @@ O arquivo **configuracao-inicial.json contém credenciais reais em texto legíve
 Na primeira abertura, o app importa somente credenciais ausentes. Chaves existentes, calibração, plantas, registros e offset do Telegram são preservados. Depois da importação, a pasta local `Dados` usa a proteção do Windows; o arquivo inicial do repositório continua legível para permitir a instalação nos outros dispositivos. Não há envio das credenciais ao GitHub pelo aplicativo.
 
 Credenciais do WhatsApp, quando presentes, são importadas, mas seu envio e receptor ficam desativados até conferir o endereço HTTPS no novo dispositivo. O bot Telegram conserva seu vínculo, sem precisar gerar outro código.
+
+## Novo na 2.4
+
+O histórico simulado usa uma cópia do perfil da planta cadastrada e cobre sete dias completos anteriores à geração. O título mostra o nome da planta, com uma indicação discreta de dados simulados. A visão Semana completa reúne todo o período; selecionar a tabela permite examinar cada dia. Mostrar histórico da planta está disponível em todas as etapas do roteiro. 475 verificações locais passaram.
+
+## Novo na 2.3
+
+- A etapa 5 da apresentação oferece Enviar demonstração ao celular, com mensagem real de teste e confirmação pelo bot, sem criar rega.
+- O Histórico alterna entre dados reais e sete dias fictícios da mostra.
+- CSV, JSON e PDF fictícios ficam em uma pasta separada, com origem simulada.
+- Avisos automáticos continuam pausados durante a apresentação e o histórico fictício.
+
+## Novo na 2.2
+
+Abra **Apresentar.cmd** para entrar direto no roteiro da mostra de conhecimento, ou escolha **Apresentação** no menu lateral. Há cinco etapas, cenários simulados, comparação com sensores reais e tela cheia por F11. Os exemplos não gravam medições ou regas, e os avisos automáticos ficam pausados nessa tela. Leia o [roteiro sugerido](ROTEIRO-DA-MOSTRA.md).
+
+Compilação e 441 verificações locais passaram; telas foram inspecionadas com dados fictícios. A projeção no equipamento da faculdade ainda precisa de ensaio no local.
 
 ## Novo na 2.1
 

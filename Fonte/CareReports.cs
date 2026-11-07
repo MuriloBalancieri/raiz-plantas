@@ -2,10 +2,10 @@ using System;using System.Collections.Generic;using System.Globalization;using S
 namespace Raiz {
 // A small PDF writer for text and vector charts; no external runtime or printer is required.
 public sealed class ReportPdf {
-    readonly List<StringBuilder> pages=new List<StringBuilder>();StringBuilder current;
+    readonly bool simulated;public ReportPdf(bool simulated=false){this.simulated=simulated;}readonly List<StringBuilder> pages=new List<StringBuilder>();StringBuilder current;
     static readonly CultureInfo Inv=CultureInfo.InvariantCulture;
     static string N(double n){return n.ToString("0.##",Inv);}
-    public void Page(){current=new StringBuilder();pages.Add(current);Text(42,800,"RAIZ 2.1  |  Relatório do vaso",12,true);Text(42,25,"Índices relativos à calibração local. Horários deste computador.  •  "+pages.Count,8,false);}
+    public void Page(){current=new StringBuilder();pages.Add(current);Text(42,800,simulated?"RAIZ | Histórico da planta":"RAIZ | Relatório do vaso",12,true);Text(42,25,(simulated?"Dados simulados  |  ":"Índices relativos à calibração local. Horários deste computador.  |  ")+pages.Count,8,false);}
     static string Escape(string value){return (value??"").Replace("\\","\\\\").Replace("(","\\(").Replace(")","\\)").Replace("\r"," ").Replace("\n"," ");}
     public void Text(double x,double y,string value,int size=10,bool bold=false){current.Append("BT /").Append(bold?"F2":"F1").Append(' ').Append(size).Append(" Tf ").Append(N(x)).Append(' ').Append(N(y)).Append(" Td (").Append(Escape(value)).Append(") Tj ET\n");}
     public double Paragraph(double y,string value,int max=85){foreach(var paragraph in value.Split('\n')){string line="";foreach(var word in paragraph.Split(' ')){if(line.Length+word.Length>max){Text(42,y,line);y-=15;line="";}line+=(line.Length==0?"":" ")+word;}if(line!=""){Text(42,y,line);y-=15;}}return y-8;}
@@ -29,15 +29,15 @@ public static class CareReports {
     static string Num(double? n){return n.HasValue?n.Value.ToString("0.0",CultureInfo.InvariantCulture):"";}
     public static void Csv(string path,Plant plant,DailySnapshot data){
         var rows=new List<string>{"tipo,data_local,planta,solo_min_pct,solo_max_pct,solo_ultimo_pct,leituras,minutos_observados,minutos_sem_cobertura,regas,volume_ml,volume_desconhecido,origem"};
-        foreach(var d in data.Days)rows.Add(string.Join(",",new[]{"dia",d.Date.ToString("yyyy-MM-dd"),plant.Name,Num(d.SoilMin),Num(d.SoilMax),Num(d.LastSoil),d.Count.ToString(),(d.CoveredSeconds/60).ToString("0.0",CultureInfo.InvariantCulture),d.MissingMinutes.ToString("0.0",CultureInfo.InvariantCulture),d.Waterings.ToString(),d.KnownMl.ToString(),d.UnknownVolumes.ToString(),"real"}.Select(Store.CsvCell)));
+        foreach(var d in data.Days)rows.Add(string.Join(",",new[]{"dia",d.Date.ToString("yyyy-MM-dd"),plant.Name,Num(d.SoilMin),Num(d.SoilMax),Num(d.LastSoil),d.Count.ToString(),(d.CoveredSeconds/60).ToString("0.0",CultureInfo.InvariantCulture),d.MissingMinutes.ToString("0.0",CultureInfo.InvariantCulture),d.Waterings.ToString(),d.KnownMl.ToString(),d.UnknownVolumes.ToString(),data.Simulated?"simulado":"real"}.Select(Store.CsvCell)));
         foreach(var r in data.Waterings)rows.Add(string.Join(",",new[]{"rega",r.FinishedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),plant.Name,"","","","","","","1",r.VolumeUnknown?"":r.TotalMl.ToString(),r.VolumeUnknown?"1":"0",r.Origin}.Select(Store.CsvCell)));
         DataTransfer.AtomicWrite(path,new UTF8Encoding(true).GetBytes(string.Join("\r\n",rows)+"\r\n"));
     }
     public static void Pdf(string path,Plant plant,DailySnapshot data,DateTime now){
-        var pdf=new ReportPdf();pdf.Page();pdf.Text(42,755,plant.Name??"Planta",20,true);pdf.Text(42,727,plant.Scientific??"Espécie não informada",11);
+        var pdf=new ReportPdf(data.Simulated);pdf.Page();pdf.Text(42,755,plant.Name??"Planta",20,true);pdf.Text(42,727,plant.Scientific??"Espécie não informada",11);
         string period=data.Days.Count==0?"Sem período":data.Days.First().Date.ToString("dd/MM/yyyy")+" a "+data.Days.Last().Date.ToString("dd/MM/yyyy");pdf.Text(42,700,"Período: "+period+"  |  Emitido: "+now.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),10);
         pdf.Text(42,660,"Resumo da evolução",14,true);double y=pdf.Paragraph(635,Evolution.Describe(data,plant));
-        y=pdf.Paragraph(y-10,data.Days.Sum(d=>d.Count)+" leituras reais; "+data.Waterings.Count+" rega(s); "+data.Waterings.Where(r=>!r.VolumeUnknown).Sum(r=>(long)r.TotalMl)+" mL medidos e "+data.Waterings.Count(r=>r.VolumeUnknown)+" rega(s) sem volume informado.");
+        y=pdf.Paragraph(y-10,data.Days.Sum(d=>d.Count)+(data.Simulated?" leituras no período; ":" leituras reais; ")+data.Waterings.Count+" rega(s); "+data.Waterings.Where(r=>!r.VolumeUnknown).Sum(r=>(long)r.TotalMl)+(data.Simulated?" mL registrados e ":" mL medidos e ")+data.Waterings.Count(r=>r.VolumeUnknown)+" rega(s) sem volume informado.");
         y=pdf.Paragraph(y,"O tempo sem cobertura indica falta de observação, não valor zero. Mudanças de calibração registradas e lacunas interrompem as curvas. A dose e os índices não são medições físicas de água no substrato ou iluminância.");
         if(data.Truncated||data.Invalid>0)pdf.Paragraph(y,"Consulta limitada: "+(data.Truncated?"últimos 80 MB do arquivo. ":"")+data.Invalid+" linha(s) inválida(s) ignorada(s).");
         pdf.Page();pdf.Text(42,755,"Solo e luz no período",18,true);pdf.Text(42,726,"Verde: solo  |  dourado: luz  |  azul: rega",10);
@@ -47,7 +47,7 @@ public static class CareReports {
         HistoryPoint previous=null;foreach(var point in data.Points){if(previous!=null&&previous.Segment==point.Segment){if(previous.Soil.HasValue&&point.Soil.HasValue)pdf.Line(x(previous.Utc),yy(previous.Soil.Value),x(point.Utc),yy(point.Soil.Value),"0.14 0.44 0.30");if(previous.Light.HasValue&&point.Light.HasValue)pdf.Line(x(previous.Utc),yy(previous.Light.Value),x(point.Utc),yy(point.Light.Value),"0.7 0.45 0.08");}else{if(point.Soil.HasValue)pdf.Line(x(point.Utc),yy(point.Soil.Value),x(point.Utc)+1,yy(point.Soil.Value),"0.14 0.44 0.30");if(point.Light.HasValue)pdf.Line(x(point.Utc),yy(point.Light.Value),x(point.Utc)+1,yy(point.Light.Value),"0.7 0.45 0.08");}previous=point;}
         foreach(var r in data.Waterings)pdf.Line(x(r.FinishedUtc),bottom,x(r.FinishedUtc),top,"0.2 0.45 0.7");
         pdf.Paragraph(245,data.Points.Count==0?"Sem medições reais no período selecionado. Nenhuma curva foi presumida.":"A curva usa o último ponto de cada trecho contínuo de cinco minutos. A tabela diária considera todas as leituras válidas. Gráfico em índice relativo de 0 a 100.");
-        pdf.Page();pdf.Text(42,755,"Medições por dia",18,true);pdf.Text(42,725,"Dia          Solo mín.–máx.    Último solo    Regas    mL medidos    Sem cobertura",10,true);y=703;
+        pdf.Page();pdf.Text(42,755,"Medições por dia",18,true);pdf.Text(42,725,data.Simulated?"Dia          Solo mín.–máx.    Último solo    Regas    mL registrados  Sem cobertura":"Dia          Solo mín.–máx.    Último solo    Regas    mL medidos    Sem cobertura",10,true);y=703;
         foreach(var day in data.Days){pdf.Text(42,y,day.Date.ToString("dd/MM"),9);pdf.Text(106,y,day.SoilMin.HasValue?Num(day.SoilMin)+"–"+Num(day.SoilMax)+"%":"Sem índice",9);pdf.Text(218,y,day.LastSoil.HasValue?Num(day.LastSoil)+"%":"—",9);pdf.Text(300,y,day.Waterings.ToString(),9);pdf.Text(355,y,day.KnownMl+(day.UnknownVolumes>0?" + ?":""),9);pdf.Text(455,y,Math.Round(day.MissingMinutes)+" min",9);y-=18;}
         pdf.Paragraph(y-15,"? indica rega com volume desconhecido. Uma linha sem índice pode conter leituras brutas sem calibração. Horários seguem o fuso atual deste computador.");
         pdf.Page();pdf.Text(42,755,"Regas registradas",18,true);y=723;
