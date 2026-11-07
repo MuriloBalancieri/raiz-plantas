@@ -12,6 +12,31 @@ Aplicativo para Windows que reúne sensores de solo e luz do Arduino, orientaç�
 
 Requisitos: Windows 10/11, .NET Framework 4.8 e driver USB da placa para os sensores. Não precisa instalar Python ou Node.
 
+## Downloads para preparar outro computador
+
+Os links abaixo são dos fabricantes e projetos oficiais. Não é necessário instalar todos os itens: escolha conforme o uso.
+
+| Item | Link oficial | Quando precisa |
+| --- | --- | --- |
+| .NET Framework 4.8 **Runtime** | [Download da Microsoft](https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48) | Para executar o Raiz, caso o Windows ainda não tenha uma versão compatível. Escolha **Runtime**, não Developer Pack. Se o computador já tiver 4.8 ou 4.8.1, não precisa reinstalar. |
+| Arduino IDE | [Download da Arduino](https://www.arduino.cc/en/software) | Para enviar ou atualizar o programa da placa. Se o Arduino já estiver programado e reconhecido, a IDE não é necessária para abrir o Raiz. |
+| Driver USB serial CH340/CH341 | [CH341SER.EXE — WCH](https://www.wch.cn/downloads/CH341SER_EXE.html) | Somente para placas que usam esse chip, caso a porta USB serial não seja reconhecida. No Gerenciador de Dispositivos, pode aparecer como **USB-SERIAL CH340**. O nome Uno sozinho não identifica o chip USB. |
+| Orientações de driver da Arduino | [Placa com aviso no Gerenciador de Dispositivos](https://support.arduino.cc/hc/en-us/articles/360016420100-Windows-Device-Manager-shows-a-warning-sign-under-my-device) | Para conferir a instalação da placa e do pacote correto na IDE quando o Windows não a reconhece. Siga esta orientação para a sua placa; o driver CH340 não serve para todos os modelos. |
+| Telegram no celular | [Aplicativos oficiais](https://telegram.org/apps) | Para receber o aviso e confirmar a demonstração no bot. Mantenha a mesma conta que foi vinculada ao Raiz. |
+| Telegram Desktop — opcional | [Download oficial para computador](https://desktop.telegram.org/) | Apenas se quiser mostrar a conversa também na tela do computador. O Raiz não depende do Telegram Desktop para enviar mensagens ao celular. |
+| Git para Windows — opcional | [Download oficial](https://git-scm.com/install/windows) | Para clonar e atualizar o repositório por comandos Git. Se usar **Code → Download ZIP**, não precisa instalar Git. |
+
+### Conferência rápida antes da apresentação
+
+1. Extraia ou clone a pasta inteira em um local onde possa salvar arquivos. Abra `Raiz.exe` ou `Apresentar.cmd`.
+2. Para levar a mesma planta, calibração e histórico, use **Configurações → Transferir dados** na origem e importe o arquivo protegido no destino. Apenas clonar o repositório não transfere esses registros.
+3. Se for usar sensores reais, conecte o Arduino com um cabo USB de dados e confira a porta **COM** no Gerenciador de Dispositivos e em **Sensores** no Raiz. A numeração pode mudar no outro computador.
+4. Se precisar atualizar o programa da placa, use o arquivo `Arduino/Sensores_Planta/Sensores_Planta.ino` incluído no projeto. Depois, feche o Monitor Serial e o Plotter da IDE para liberar a porta ao Raiz.
+5. Feche o Raiz no computador anterior antes de usar o mesmo bot no destino. Confira a internet e use **Enviar demonstração ao celular** na etapa 5 para verificar a chegada da mensagem e sua confirmação.
+6. Para mostrar apenas o roteiro e o histórico simulado, não precisa conectar o Arduino nem instalar o driver USB. A mensagem no celular depende de internet e do bot vinculado.
+
+Links conferidos em 06/11/2026. O app já inclui o executável; esses downloads não exigem recompilar o projeto.
+
 ## Configuração privada incluída
 
 O arquivo **configuracao-inicial.json contém credenciais reais em texto legível**, incluídas por solicitação do proprietário para evitar cadastrá-las novamente em outros dispositivos. **Mantenha este repositório privado e limite os colaboradores.** Qualquer pessoa com acesso ao repositório ou ao ZIP pode usar essas chaves e o token do bot. Não publique esse arquivo, o ZIP ou cópias do histórico Git. Para compartilhar o projeto publicamente, retire as credenciais e revogue os tokens que já estiverem no histórico.
