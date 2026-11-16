@@ -21,7 +21,7 @@ A fonte usada é **Segoe UI**, já incluída no Windows. Em outro sistema, o Pow
 
 - **PowerPoint:** aba *Apresentação de Slides* → *Do Começo* (F5). No modo Apresentador, as notas aparecem na tela do palestrante.
 - **PDF:** tela cheia no visualizador. As notas não aparecem no PDF, por isso ele serve para consulta ou impressão.
-- **Duração:** 16 slides, cerca de 8 a 10 minutos. Para uma fala curta, use os slides 2, 3, 9, 10, 12 e 15.
+- **Duração:** 14 slides, cerca de 7 a 9 minutos. Para uma fala curta, use os slides 2, 3, 9, 10 e 12, fechando no 14.
 - **Demonstração ao vivo:** o roteiro de cinco minutos do aplicativo está em [../ROTEIRO-DA-MOSTRA.md](../ROTEIRO-DA-MOSTRA.md). Os slides não substituem a demonstração no Raiz.
 
 ## Estrutura
@@ -38,10 +38,8 @@ A fonte usada é **Segoe UI**, já incluída no Windows. Em outro sistema, o Pow
 10. Histórico e evolução do vaso
 11. Relatórios, diagnósticos e transferência
 12. Modo Apresentação do aplicativo
-13. Evolução do projeto
-14. Engenharia e validação
-15. Limites e o que ainda não está provado
-16. Encerramento
+13. Engenharia e validação
+14. Encerramento
 
 ## Observações
 

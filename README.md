@@ -4,7 +4,7 @@ Aplicativo para Windows que reúne sensores de solo e luz do Arduino, orientaç�
 
 ## Apresentação
 
-Slides prontos na pasta [Apresentacao](Apresentacao/): **PDF** para abrir em qualquer computador ou celular e **PPTX** para editar ou apresentar com as notas do orador. São 16 telas sobre o problema, a montagem, a calibração, as APIs, o Telegram, o histórico e os limites do projeto. Veja as instruções em [Apresentacao/LEIA-ME.md](Apresentacao/LEIA-ME.md). O roteiro da demonstração ao vivo continua em [ROTEIRO-DA-MOSTRA.md](ROTEIRO-DA-MOSTRA.md).
+Slides prontos na pasta [Apresentacao](Apresentacao/): **PDF** para abrir em qualquer computador ou celular e **PPTX** para editar ou apresentar com as notas do orador. São 14 telas sobre o problema, a montagem, a calibração, as APIs, o Telegram e o histórico do vaso. Veja as instruções em [Apresentacao/LEIA-ME.md](Apresentacao/LEIA-ME.md). O roteiro da demonstração ao vivo continua em [ROTEIRO-DA-MOSTRA.md](ROTEIRO-DA-MOSTRA.md).
 
 ## Abrir em outro computador
 
