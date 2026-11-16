@@ -2,6 +2,10 @@
 
 Aplicativo para Windows que reúne sensores de solo e luz do Arduino, orientações da espécie pela Perenual, clima da região e avisos de rega pelo Telegram.
 
+## Apresentação
+
+Slides prontos na pasta [Apresentacao](Apresentacao/): **PDF** para abrir em qualquer computador ou celular e **PPTX** para editar ou apresentar com as notas do orador. São 16 telas sobre o problema, a montagem, a calibração, as APIs, o Telegram, o histórico e os limites do projeto. Veja as instruções em [Apresentacao/LEIA-ME.md](Apresentacao/LEIA-ME.md). O roteiro da demonstração ao vivo continua em [ROTEIRO-DA-MOSTRA.md](ROTEIRO-DA-MOSTRA.md).
+
 ## Abrir em outro computador
 
 1. Baixe o ZIP deste repositório privado em **Code → Download ZIP**, ou clone o repositório.
