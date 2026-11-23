@@ -8,11 +8,13 @@ Slides prontos na pasta [Apresentacao](Apresentacao/): **PDF** para abrir em qua
 
 ## Abrir em outro computador
 
-1. Baixe o ZIP deste repositório privado em **Code → Download ZIP**, ou clone o repositório.
+1. Baixe o ZIP deste repositório em **Code → Download ZIP**, ou clone o repositório.
 2. Extraia a pasta inteira para um local gravável e abra **Raiz.exe**.
 3. A configuração inicial incluída importa as chaves de API e o vínculo do Telegram automaticamente. As credenciais de uso local são protegidas para o novo usuário Windows.
 4. Feche o Raiz no outro computador antes de usar o mesmo bot: apenas uma instalação deve consultar suas respostas por vez.
-5. Conecte o Arduino em **Sensores**. Porta USB e calibração pertencem à montagem de cada dispositivo; os históricos antigos não são distribuídos neste repositório.
+5. Conecte o Arduino em **Sensores**. Porta USB e calibração pertencem à montagem de cada dispositivo; a planta e o histórico de referência já vêm na pasta `Dados`.
+
+A pasta `Dados` já traz a planta cadastrada, a calibração registrada e o histórico dos testes. O app abre direto em **Hoje**, sem passar pelo assistente; basta conferir a porta COM e recalibrar solo e luz na nova montagem.
 
 Requisitos: Windows 10/11, .NET Framework 4.8 e driver USB da placa para os sensores. Não precisa instalar Python ou Node.
 

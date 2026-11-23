@@ -1,7 +1,10 @@
-Dados/
+Dados/*
+!Dados/configuracao.json
 dados-local.txt
 *.protegido
 *.csv
+!Dados/historico.csv
+!Dados/regas.csv
 !Apresentacao/dados-simulados/*.csv
 *.tmp
 *.bak
