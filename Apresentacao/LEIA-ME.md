@@ -6,14 +6,15 @@ Slides prontos para a mostra de conhecimento, com notas do orador em cada tela.
 | --- | --- |
 | `Raiz-Apresentacao.pdf` | Visualizar em qualquer computador, celular ou tablet, sem instalar nada. Também serve para imprimir. |
 | `Raiz-Apresentacao.pptx` | Editar no PowerPoint, LibreOffice Impress ou Google Apresentações, e apresentar com as notas do orador. |
-| `imagens/` | Capturas de tela e fotos usadas nos slides, para reaproveitar em outros materiais. |
+| `imagens/` | Capturas de tela do app usadas nos slides, para reaproveitar em outros materiais. |
+| `dados-simulados/` | Histórico de sete dias, regas, resumo e relatório gerados pelo app para a mostra, com origem simulada. |
 
 ## Abrir em outro computador
 
-1. Baixe o repositório (**Code → Download ZIP**) ou clone, e abra a pasta `Apresentacao`.
+1. Copie a pasta `Apresentacao` inteira para o outro computador.
 2. Para só mostrar: abra o **PDF** no navegador ou no visualizador do sistema e use tela cheia.
 3. Para editar ou usar as notas: abra o **PPTX** no PowerPoint.
-4. No celular, o PDF abre direto pelo aplicativo do GitHub ou depois de baixado; o PPTX precisa de um aplicativo de apresentações.
+4. No celular, o PDF abre em qualquer leitor de PDF depois de baixado; o PPTX precisa de um aplicativo de apresentações.
 
 A fonte usada é **Segoe UI**, já incluída no Windows. Em outro sistema, o PowerPoint ou o LibreOffice substitui a fonte e pode alterar levemente os espaços.
 
@@ -44,8 +45,8 @@ A fonte usada é **Segoe UI**, já incluída no Windows. Em outro sistema, o Pow
 ## Observações
 
 - As telas do aplicativo são renderizações com **dados simulados**, identificadas nos slides e nas notas.
-- Nenhuma chave de API, token do Telegram ou dado de planta real está incluído nesta pasta.
+- Nenhuma chave de API ou token está incluída nesta pasta.
+- Os arquivos de `dados-simulados/` foram gerados pelo próprio app a partir do perfil da planta. A origem está marcada como simulada e não são medições reais.
 - Os números de validação citados vêm da documentação do projeto: 475 verificações na versão 2.4 e 24 verificações focadas na 2.4.1. Eles não representam precisão agronômica.
-- O repositório é privado e o acesso deve continuar restrito, conforme a seção de configuração privada do [README](../README.md).
 
 Versão dos slides: novembro de 2026, alinhada ao Raiz 2.4.1.

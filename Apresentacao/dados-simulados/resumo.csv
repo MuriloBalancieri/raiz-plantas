@@ -1,0 +1,12 @@
+tipo,data_local,planta,solo_min_pct,solo_max_pct,solo_ultimo_pct,leituras,minutos_observados,minutos_sem_cobertura,regas,volume_ml,volume_desconhecido,origem
+"dia","2026-10-30","Jade da sala","8.2","85.0","59.9","8640","1439.8","0.2","1","120","0","simulado"
+"dia","2026-10-31","Jade da sala","20.5","59.9","20.5","8640","1439.8","0.2","0","0","0","simulado"
+"dia","2026-11-01","Jade da sala","8.2","85.0","59.9","8640","1439.8","0.2","1","130","0","simulado"
+"dia","2026-11-02","Jade da sala","20.5","59.9","20.5","7920","1319.7","120.3","0","0","0","simulado"
+"dia","2026-11-03","Jade da sala","8.2","85.0","59.9","8640","1439.8","0.2","1","140","0","simulado"
+"dia","2026-11-04","Jade da sala","20.5","59.9","20.5","8640","1439.8","0.2","0","0","0","simulado"
+"dia","2026-11-05","Jade da sala","8.2","85.0","59.9","8370","1394.7","45.3","1","150","0","simulado"
+"rega","2026-10-30 08:00:00","Jade da sala","","","","","","","1","120","0","Registro simulado"
+"rega","2026-11-01 08:00:00","Jade da sala","","","","","","","1","130","0","Registro simulado"
+"rega","2026-11-03 08:00:00","Jade da sala","","","","","","","1","140","0","Registro simulado"
+"rega","2026-11-05 08:00:00","Jade da sala","","","","","","","1","150","0","Registro simulado"

@@ -2,6 +2,7 @@ Dados/
 dados-local.txt
 *.protegido
 *.csv
+!Apresentacao/dados-simulados/*.csv
 *.tmp
 *.bak
 *.log

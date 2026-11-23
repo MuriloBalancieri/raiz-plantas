@@ -1,0 +1,11 @@
+﻿HISTÓRICO DA PLANTA
+Dados simulados a partir do perfil cadastrado. Não são medições reais e não devem orientar a rega.
+
+O histórico tem sete dias, ciclos de secagem, regas ilustrativas, variação diária de luz, sombra e lacunas de coleta. A coluna origem dos CSV contém simulado.
+
+configuracao-exemplo.json: perfil da planta e referências locais, sem credenciais.
+historico.csv: medições ilustrativas no formato do app.
+regas.csv: volumes inventados e marcados como simulação.
+resumo.csv e relatorio.pdf: exemplos de exportação.
+
+O app não carrega este conteúdo no histórico real. Não renomeie nem importe estes arquivos como dados reais.
