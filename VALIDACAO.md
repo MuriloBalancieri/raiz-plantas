@@ -1,6 +1,17 @@
-﻿# Validação — Raiz 2.0
+﻿# Validação — Raiz 2.4.1
 
-Data: 29/10/2026. Testes locais neste Windows; não houve CI nem validação em outro computador.
+Data: 24/11/2026. Testes locais neste Windows; não houve CI nem validação em outro computador.
+
+## Versão 2.4.1 — apresentação e histórico simulado
+
+- **475 verificações locais passaram** nesta execução, incluindo o arquivo opcional da resposta pública da Perenual. A suíte portátil, executada apenas com os arquivos do repositório, roda **474 verificações**, sem esse arquivo opcional.
+- A 2.4.1 acrescentou 24 verificações focadas: nomes neutros dos arquivos (`historico.csv`, `regas.csv`, `resumo.csv` e `relatorio.pdf`), resumo sem linguagem de fictício, pasta separada `Arquivos-do-historico` e preservação dos dados reais.
+- O modo Apresentação foi testado com as cinco etapas, cenários ilustrativos (solo úmido, solo seco, pouca luz e sem sinal), tela cheia (F11), abertura do histórico em todas as etapas e pausa dos avisos automáticos.
+- O histórico simulado cobre sete dias completos anteriores à geração, usa o nome, a espécie e o perfil da planta cadastrada, com identidade e armazenamento separados. CSV, JSON e PDF ficam em pasta própria e mantêm a origem simulada.
+- A demonstração pelo Telegram usa mensagem real de teste, marcada como DEMONSTRAÇÃO, com botão que confirma o evento sem criar rega. Nesta execução não houve novo envio real ao celular.
+- Os testes de sensores, calibração, regras de rega e luz, Telegram, relatórios, transferência, interface e layout foram preservados. As APIs externas continuam simuladas na suíte.
+- Não houve validação física completa em outro computador, ensaio no projetor da faculdade nem teste prolongado de coleta em segundo plano.
+- As limitações de medição, doses e histórico estão descritas no README e em NOVO-2.0.md e NOVO-2.1.md.
 
 ## Versão 2.0 — seis recursos
 

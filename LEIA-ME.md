@@ -4,9 +4,9 @@ Esta cópia foi preparada para o GitHub privado. O arquivo `configuracao-inicial
 
 # Raiz — monitor de plantas para Windows
 
-Os seis novos recursos da versão 2.0 estão descritos em [NOVO-2.0.md](NOVO-2.0.md).
+As mudanças da versão 2.0 estão descritas em [NOVO-2.0.md](NOVO-2.0.md); as versões seguintes estão resumidas no [README](README.md).
 
-Versão 2.0 · 29/10/2026
+Versão 2.4.1 · 24/11/2026
 
 Aplicativo local que reúne solo e luminosidade do Arduino, cuidados da espécie e clima externo da cidade. A rega é manual.
 
